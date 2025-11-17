@@ -6,6 +6,7 @@ function DashboardScreen() {
   const address = useWalletStore((state) => state.address);
   const balance = useWalletStore((state) => state.balance);
   const transactions = useWalletStore((state) => state.transactions);
+  const tokenBalances = useWalletStore((state) => state.tokenBalances);
   const lockWallet = useWalletStore((state) => state.actions.lockWallet);
   const wipeWallet = useWalletStore((state) => state.actions.wipeWallet);
   const fetchData = useWalletStore((state) => state.actions.fetchData);
@@ -14,6 +15,12 @@ function DashboardScreen() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Créer une liste d'actifs unifiée
+  const assets = [
+    { symbol: 'ETH', balance: balance, logo: null, contractAddress: null, decimals: 18 }, // L'ETH en premier
+    ...tokenBalances
+  ];
 
   const handleWipeWallet = () => {
     Alert.alert(
@@ -43,13 +50,34 @@ function DashboardScreen() {
           {address}
         </Text>
 
-        <Text style={styles.label}>Solde :</Text>
+        <Text style={styles.label}>Solde total :</Text>
         <Text style={styles.balance}>{balance} ETH</Text>
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={() => setScreen('send')}>
-        <Text style={styles.buttonText}>Envoyer</Text>
-      </TouchableOpacity>
+      <Text style={styles.sectionTitle}>Mes Actifs</Text>
+
+      <FlatList
+        data={assets}
+        keyExtractor={(item) => item.contractAddress || 'ETH'}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.assetItem}
+            onPress={() => setScreen('send', item)}>
+            <View style={styles.assetInfo}>
+              {item.logo ? (
+                <Text style={styles.assetLogo}>🪙</Text>
+              ) : (
+                <Text style={styles.assetLogo}>💎</Text>
+              )}
+              <View style={styles.assetDetails}>
+                <Text style={styles.assetSymbol}>{item.symbol}</Text>
+                <Text style={styles.assetBalance}>{item.balance}</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
+        style={styles.assetsList}
+      />
 
       <TouchableOpacity style={styles.button} onPress={() => setScreen('receive')}>
         <Text style={styles.buttonText}>Recevoir</Text>
@@ -161,6 +189,37 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 15,
     color: '#333',
+  },
+  assetsList: {
+    maxHeight: 200,
+    marginBottom: 20,
+  },
+  assetItem: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+  },
+  assetInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  assetLogo: {
+    fontSize: 32,
+    marginRight: 15,
+  },
+  assetDetails: {
+    flex: 1,
+  },
+  assetSymbol: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  assetBalance: {
+    fontSize: 16,
+    color: '#007AFF',
   },
   transactionItem: {
     backgroundColor: '#F5F5F5',

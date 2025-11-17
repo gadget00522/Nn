@@ -8,6 +8,7 @@ function SendScreen() {
   
   const isSending = useWalletStore((state) => state.isSending);
   const sendError = useWalletStore((state) => state.sendError);
+  const assetToSend = useWalletStore((state) => state.assetToSend);
   const sendTransaction = useWalletStore((state) => state.actions.sendTransaction);
   const setScreen = useWalletStore((state) => state.actions.setScreen);
 
@@ -19,14 +20,19 @@ function SendScreen() {
   };
 
   const handleBack = () => {
-    setScreen('dashboard');
+    setScreen('dashboard', null);
   };
+
+  // Utiliser l'actif sélectionné ou ETH par défaut
+  const asset = assetToSend || { symbol: 'ETH', balance: '0', decimals: 18 };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Envoyer ETH</Text>
+      <Text style={styles.title}>Envoyer {asset.symbol}</Text>
 
       <View style={styles.formContainer}>
+        <Text style={styles.label}>Solde disponible : {asset.balance} {asset.symbol}</Text>
+        
         <Text style={styles.label}>Adresse du destinataire :</Text>
         <TextInput
           style={styles.input}
@@ -38,7 +44,7 @@ function SendScreen() {
           autoCorrect={false}
         />
 
-        <Text style={styles.label}>Montant (ETH) :</Text>
+        <Text style={styles.label}>Montant ({asset.symbol}) :</Text>
         <TextInput
           style={styles.input}
           placeholder="0.0"

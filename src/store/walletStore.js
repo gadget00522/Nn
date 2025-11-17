@@ -15,6 +15,8 @@ const useWalletStore = create((set, get) => ({
   isSending: false,
   sendError: null,
   transactions: [],
+  tokenBalances: [],
+  assetToSend: null,
 
   // Actions
   actions: {
@@ -121,7 +123,36 @@ const useWalletStore = create((set, get) => ({
         // Récupère le solde
         const balanceWei = await alchemy.core.getBalance(address);
         const balanceEth = ethers.formatEther(balanceWei);
-        set({ balance: balanceEth });
+        
+        // --- Récupérer les soldes des tokens ---
+        const tokenBalancesResponse = await alchemy.core.getTokenBalances(address);
+
+        // Filtrer les tokens sans solde ou sans métadonnées pour éviter le spam
+        const tokensWithBalance = tokenBalancesResponse.tokenBalances.filter(token =>
+          token.tokenBalance !== "0" && token.tokenBalance !== null
+        );
+
+        // Récupérer les métadonnées pour chaque token
+        const tokenMetadataPromises = tokensWithBalance.map(token =>
+          alchemy.core.getTokenMetadata(token.contractAddress)
+        );
+        const tokenMetadataList = await Promise.all(tokenMetadataPromises);
+
+        // Formater les données pour un affichage propre
+        const finalTokenList = tokensWithBalance.map((token, index) => {
+          const metadata = tokenMetadataList[index];
+          if (!metadata.symbol) return null;
+          
+          // Le solde est en hexadécimal, il faut le convertir
+          const balance = (parseInt(token.tokenBalance, 16) / Math.pow(10, metadata.decimals)).toFixed(4);
+          return {
+            symbol: metadata.symbol,
+            balance: balance,
+            contractAddress: token.contractAddress,
+            decimals: metadata.decimals,
+            logo: metadata.logo,
+          };
+        }).filter(token => token !== null);
         
         // Récupère les transactions envoyées
         const sentTransfers = await alchemy.core.getAssetTransfers({
@@ -153,24 +184,32 @@ const useWalletStore = create((set, get) => ({
           return dateB - dateA;
         });
         
-        set({ transactions: allTransfers.slice(0, 40) });
+        // Mettre à jour l'état avec TOUTES les nouvelles données
+        set({ 
+          balance: balanceEth, 
+          transactions: allTransfers.slice(0, 40),
+          tokenBalances: finalTokenList 
+        });
       } catch (error) {
         console.log('Failed to fetch data:', error);
-        set({ balance: '0', transactions: [] });
+        set({ balance: '0', transactions: [], tokenBalances: [] });
       }
     },
 
     // Change l'écran actuel
-    setScreen: (screenName) => {
-      set({ currentScreen: screenName });
+    setScreen: (screenName, asset = null) => {
+      set({ 
+        currentScreen: screenName,
+        assetToSend: asset 
+      });
     },
 
-    // Envoie une transaction ETH
+    // Envoie une transaction ETH ou ERC-20
     sendTransaction: async (toAddress, amount) => {
       set({ isSending: true, sendError: null });
       
       try {
-        const { mnemonic } = get();
+        const { mnemonic, assetToSend } = get();
         
         if (!mnemonic) {
           throw new Error('Mnémonique non disponible. Veuillez déverrouiller le portefeuille.');
@@ -190,20 +229,37 @@ const useWalletStore = create((set, get) => ({
           throw new Error('Adresse du destinataire invalide.');
         }
         
-        // Convertir le montant en wei
-        const txValue = ethers.parseEther(amount);
-        
-        // Construire l'objet de transaction
-        const tx = {
-          to: toAddress,
-          value: txValue,
-        };
-        
-        // Envoyer la transaction
-        const txResponse = await connectedWallet.sendTransaction(tx);
-        
-        // Attendre la confirmation
-        await txResponse.wait();
+        if (assetToSend && assetToSend.contractAddress) {
+          // CAS 1 : C'est un TOKEN ERC-20
+          
+          // Définir l'interface minimale du contrat pour un transfert
+          const tokenAbi = ["function transfer(address to, uint256 amount)"];
+          const tokenContract = new ethers.Contract(assetToSend.contractAddress, tokenAbi, connectedWallet);
+          
+          // Convertir le montant en utilisant les décimales du token
+          const amountToSend = ethers.parseUnits(amount, assetToSend.decimals);
+          
+          // Appeler la fonction `transfer` du contrat
+          const tx = await tokenContract.transfer(toAddress, amountToSend);
+          await tx.wait();
+
+        } else {
+          // CAS 2 : C'est de l'ETH (logique existante)
+          // Convertir le montant en wei
+          const txValue = ethers.parseEther(amount);
+          
+          // Construire l'objet de transaction
+          const tx = {
+            to: toAddress,
+            value: txValue,
+          };
+          
+          // Envoyer la transaction
+          const txResponse = await connectedWallet.sendTransaction(tx);
+          
+          // Attendre la confirmation
+          await txResponse.wait();
+        }
         
         // Rafraîchir le solde et les transactions
         await get().actions.fetchData();
