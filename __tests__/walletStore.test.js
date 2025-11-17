@@ -52,6 +52,7 @@ describe('WalletStore', () => {
       expect(store.isWalletUnlocked).toBe(false);
       expect(store.needsBackup).toBe(false);
       expect(store.balance).toBe('0');
+      expect(store.transactions).toEqual([]);
     });
 
     it('should have actions object', () => {
@@ -65,6 +66,7 @@ describe('WalletStore', () => {
       expect(typeof store.actions.lockWallet).toBe('function');
       expect(typeof store.actions.wipeWallet).toBe('function');
       expect(typeof store.actions.fetchBalance).toBe('function');
+      expect(typeof store.actions.fetchTransactionHistory).toBe('function');
     });
   });
 
@@ -277,6 +279,79 @@ describe('WalletStore', () => {
 
       expect(store.balance).toBe('0');
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('fetchTransactionHistory', () => {
+    it('should have transactions in initial state', () => {
+      store = useWalletStore.getState();
+      expect(store.transactions).toBeDefined();
+      expect(Array.isArray(store.transactions)).toBe(true);
+    });
+
+    it('should not fetch when no address is available', async () => {
+      useWalletStore.setState({ address: null, transactions: [] });
+
+      await useWalletStore.getState().actions.fetchTransactionHistory();
+      store = useWalletStore.getState();
+
+      expect(store.transactions).toEqual([]);
+    });
+
+    it('should fetch transactions successfully', async () => {
+      const mockTransactions = [
+        {
+          hash: '0xabc123',
+          from: '0x1234567890123456789012345678901234567890',
+          to: '0x0987654321098765432109876543210987654321',
+          value: '1000000000000000000',
+          timeStamp: '1234567890',
+        },
+      ];
+
+      global.fetch = jest.fn(() =>
+        Promise.resolve({
+          json: () => Promise.resolve({ result: mockTransactions }),
+        })
+      );
+
+      useWalletStore.setState({ address: '0x123' });
+
+      await useWalletStore.getState().actions.fetchTransactionHistory();
+      store = useWalletStore.getState();
+
+      expect(store.transactions).toEqual(mockTransactions);
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('api-sepolia.etherscan.io')
+      );
+    });
+
+    it('should handle fetch transaction history errors', async () => {
+      global.fetch = jest.fn(() => Promise.reject(new Error('Network error')));
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      useWalletStore.setState({ address: '0x123' });
+
+      await useWalletStore.getState().actions.fetchTransactionHistory();
+      store = useWalletStore.getState();
+
+      expect(store.transactions).toEqual([]);
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle empty result from API', async () => {
+      global.fetch = jest.fn(() =>
+        Promise.resolve({
+          json: () => Promise.resolve({ result: null }),
+        })
+      );
+
+      useWalletStore.setState({ address: '0x123' });
+
+      await useWalletStore.getState().actions.fetchTransactionHistory();
+      store = useWalletStore.getState();
+
+      expect(store.transactions).toEqual([]);
     });
   });
 });

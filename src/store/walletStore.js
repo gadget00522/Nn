@@ -13,6 +13,7 @@ const useWalletStore = create((set, get) => ({
   currentScreen: 'dashboard',
   isSending: false,
   sendError: null,
+  transactions: [],
 
   // Actions
   actions: {
@@ -114,6 +115,28 @@ const useWalletStore = create((set, get) => ({
       } catch (error) {
         console.log('Failed to fetch balance:', error);
         set({ balance: '0' });
+      }
+    },
+
+    // Récupère l'historique des transactions
+    fetchTransactionHistory: async () => {
+      try {
+        const { address } = get();
+        
+        if (!address) {
+          return;
+        }
+        
+        const API_KEY = 'JW4K4XRS6PFB2GXSMD1R19WT9K36TVXGMM';
+        const url = `https://api-sepolia.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`;
+        
+        const response = await fetch(url);
+        const json = await response.json();
+        
+        set({ transactions: json.result || [] });
+      } catch (error) {
+        console.log('Failed to fetch transaction history:', error);
+        set({ transactions: [] });
       }
     },
 
