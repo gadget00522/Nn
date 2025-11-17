@@ -20,7 +20,7 @@ function DashboardScreen() {
     if (address) {
       fetchData();
     }
-  }, [address, currentNetwork]);
+  }, [address, currentNetwork, fetchData]);
 
   // Créer une liste d'actifs unifiée
   const assets = [

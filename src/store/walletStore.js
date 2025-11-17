@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { ethers } from 'ethers';
 import * as Keychain from 'react-native-keychain';
-import { Alchemy, Network } from 'alchemy-sdk';
+import { Alchemy } from 'alchemy-sdk';
 
 const SUPPORTED_NETWORKS = [
   { 
