@@ -1,24 +1,29 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, Linking } from 'react-native';
-import useWalletStore from '../store/walletStore';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, Linking, Modal } from 'react-native';
+import useWalletStore, { SUPPORTED_NETWORKS } from '../store/walletStore';
 
 function DashboardScreen() {
+  const [modalVisible, setModalVisible] = useState(false);
   const address = useWalletStore((state) => state.address);
   const balance = useWalletStore((state) => state.balance);
   const transactions = useWalletStore((state) => state.transactions);
   const tokenBalances = useWalletStore((state) => state.tokenBalances);
+  const currentNetwork = useWalletStore((state) => state.currentNetwork);
   const lockWallet = useWalletStore((state) => state.actions.lockWallet);
   const wipeWallet = useWalletStore((state) => state.actions.wipeWallet);
   const fetchData = useWalletStore((state) => state.actions.fetchData);
   const setScreen = useWalletStore((state) => state.actions.setScreen);
+  const switchNetwork = useWalletStore((state) => state.actions.switchNetwork);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (address) {
+      fetchData();
+    }
+  }, [address, currentNetwork]);
 
   // Créer une liste d'actifs unifiée
   const assets = [
-    { symbol: 'ETH', balance: balance, logo: null, contractAddress: null, decimals: 18 }, // L'ETH en premier
+    { symbol: currentNetwork.symbol, balance: balance, logo: null, contractAddress: null, decimals: 18 }, // L'actif natif en premier
     ...tokenBalances
   ];
 
@@ -44,6 +49,11 @@ function DashboardScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Mon Portefeuille</Text>
 
+      <TouchableOpacity style={styles.networkButton} onPress={() => setModalVisible(true)}>
+        <Text style={styles.networkButtonText}>Réseau: {currentNetwork.name}</Text>
+        <Text style={styles.networkButtonArrow}>▼</Text>
+      </TouchableOpacity>
+
       <View style={styles.infoBox}>
         <Text style={styles.label}>Adresse :</Text>
         <Text style={styles.address} numberOfLines={1} ellipsizeMode="middle">
@@ -51,7 +61,7 @@ function DashboardScreen() {
         </Text>
 
         <Text style={styles.label}>Solde total :</Text>
-        <Text style={styles.balance}>{balance} ETH</Text>
+        <Text style={styles.balance}>{balance} {currentNetwork.symbol}</Text>
       </View>
 
       <Text style={styles.sectionTitle}>Mes Actifs</Text>
@@ -105,7 +115,7 @@ function DashboardScreen() {
           return (
             <TouchableOpacity
               style={styles.transactionItem}
-              onPress={() => Linking.openURL(`https://sepolia.etherscan.io/tx/${item.hash}`)}>
+              onPress={() => Linking.openURL(`${currentNetwork.explorerUrl}/tx/${item.hash}`)}>
               <View style={styles.transactionRow}>
                 <Text style={styles.transactionAmount}>
                   {item.value} {item.asset}
@@ -128,6 +138,41 @@ function DashboardScreen() {
           <Text style={styles.emptyText}>Aucune transaction</Text>
         }
       />
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Sélectionner un réseau</Text>
+            <FlatList
+              data={SUPPORTED_NETWORKS}
+              keyExtractor={(item) => item.chainId.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.networkItem,
+                    currentNetwork.chainId === item.chainId && styles.networkItemSelected
+                  ]}
+                  onPress={() => {
+                    switchNetwork(item);
+                    setModalVisible(false);
+                  }}>
+                  <Text style={styles.networkName}>{item.name}</Text>
+                  <Text style={styles.networkSymbol}>{item.symbol}</Text>
+                </TouchableOpacity>
+              )}
+            />
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setModalVisible(false)}>
+              <Text style={styles.modalCloseButtonText}>Fermer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -141,9 +186,29 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    marginBottom: 30,
+    marginBottom: 20,
     color: '#333',
     textAlign: 'center',
+  },
+  networkButton: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  networkButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  networkButtonArrow: {
+    fontSize: 14,
+    color: '#007AFF',
   },
   infoBox: {
     backgroundColor: '#F5F5F5',
@@ -258,6 +323,62 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 16,
     marginTop: 20,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 25,
+    width: '85%',
+    maxHeight: '60%',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: '#333',
+    textAlign: 'center',
+  },
+  networkItem: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  networkItemSelected: {
+    backgroundColor: '#E3F2FD',
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  networkName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  networkSymbol: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  modalCloseButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    padding: 15,
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  modalCloseButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

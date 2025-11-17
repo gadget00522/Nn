@@ -12,6 +12,7 @@ jest.mock('alchemy-sdk', () => ({
   Alchemy: jest.fn(),
   Network: {
     ETH_SEPOLIA: 'eth-sepolia',
+    POLY_MUMBAI: 'polygon-mumbai',
   },
 }));
 
@@ -61,6 +62,8 @@ describe('WalletStore', () => {
       expect(store.needsBackup).toBe(false);
       expect(store.balance).toBe('0');
       expect(store.transactions).toEqual([]);
+      expect(store.currentNetwork).toBeDefined();
+      expect(store.currentNetwork.name).toBe('Ethereum Sepolia');
     });
 
     it('should have actions object', () => {
@@ -74,6 +77,7 @@ describe('WalletStore', () => {
       expect(typeof store.actions.lockWallet).toBe('function');
       expect(typeof store.actions.wipeWallet).toBe('function');
       expect(typeof store.actions.fetchData).toBe('function');
+      expect(typeof store.actions.switchNetwork).toBe('function');
     });
   });
 
@@ -294,6 +298,40 @@ describe('WalletStore', () => {
       expect(store.balance).toBe('0');
       expect(store.transactions).toEqual([]);
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('switchNetwork', () => {
+    it('should switch network and reset data', () => {
+      const { SUPPORTED_NETWORKS } = require('../src/store/walletStore');
+      
+      // Set some data first
+      useWalletStore.setState({
+        balance: '1.5',
+        transactions: [{ hash: '0xabc' }],
+        tokenBalances: [{ symbol: 'USDC', balance: '100' }],
+        currentNetwork: SUPPORTED_NETWORKS[0],
+      });
+
+      // Switch to Polygon Mumbai
+      useWalletStore.getState().actions.switchNetwork(SUPPORTED_NETWORKS[1]);
+      store = useWalletStore.getState();
+
+      expect(store.currentNetwork.name).toBe('Polygon Mumbai');
+      expect(store.currentNetwork.symbol).toBe('MATIC');
+      expect(store.balance).toBe('0');
+      expect(store.transactions).toEqual([]);
+      expect(store.tokenBalances).toEqual([]);
+    });
+
+    it('should export SUPPORTED_NETWORKS', () => {
+      const { SUPPORTED_NETWORKS } = require('../src/store/walletStore');
+      
+      expect(SUPPORTED_NETWORKS).toBeDefined();
+      expect(Array.isArray(SUPPORTED_NETWORKS)).toBe(true);
+      expect(SUPPORTED_NETWORKS.length).toBe(2);
+      expect(SUPPORTED_NETWORKS[0].name).toBe('Ethereum Sepolia');
+      expect(SUPPORTED_NETWORKS[1].name).toBe('Polygon Mumbai');
     });
   });
 });

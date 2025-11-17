@@ -1,7 +1,27 @@
+import { ALCHEMY_API_KEY } from '@env';
 import { create } from 'zustand';
 import { ethers } from 'ethers';
 import * as Keychain from 'react-native-keychain';
 import { Alchemy, Network } from 'alchemy-sdk';
+
+export const SUPPORTED_NETWORKS = [
+  { 
+    name: 'Ethereum Sepolia', 
+    symbol: 'ETH',
+    rpcUrl: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+    chainId: 11155111,
+    explorerUrl: 'https://sepolia.etherscan.io',
+    alchemyNetwork: Network.ETH_SEPOLIA, // Utilise l'enum d'Alchemy
+  },
+  { 
+    name: 'Polygon Mumbai', 
+    symbol: 'MATIC',
+    rpcUrl: `https://polygon-mumbai.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+    chainId: 80001,
+    explorerUrl: 'https://mumbai.polygonscan.com',
+    alchemyNetwork: Network.POLY_MUMBAI, // Utilise l'enum d'Alchemy
+  },
+];
 
 const useWalletStore = create((set, get) => ({
   // État initial du store
@@ -17,6 +37,7 @@ const useWalletStore = create((set, get) => ({
   transactions: [],
   tokenBalances: [],
   assetToSend: null,
+  currentNetwork: SUPPORTED_NETWORKS[0],
 
   // Actions
   actions: {
@@ -107,7 +128,7 @@ const useWalletStore = create((set, get) => ({
     // Récupère le solde et l'historique des transactions via Alchemy
     fetchData: async () => {
       try {
-        const { address } = get();
+        const { address, currentNetwork } = get();
         
         if (!address) {
           return;
@@ -115,8 +136,8 @@ const useWalletStore = create((set, get) => ({
         
         // Configure le client Alchemy
         const settings = {
-          apiKey: "6E1MABBp0KS-gBCc5zXk7",
-          network: Network.ETH_SEPOLIA,
+          apiKey: ALCHEMY_API_KEY,
+          network: currentNetwork.alchemyNetwork,
         };
         const alchemy = new Alchemy(settings);
         
@@ -204,19 +225,29 @@ const useWalletStore = create((set, get) => ({
       });
     },
 
+    // Change le réseau actuel
+    switchNetwork: (network) => {
+      set({ 
+        currentNetwork: network,
+        balance: '0', 
+        tokenBalances: [], 
+        transactions: [] 
+      });
+    },
+
     // Envoie une transaction ETH ou ERC-20
     sendTransaction: async (toAddress, amount) => {
       set({ isSending: true, sendError: null });
       
       try {
-        const { mnemonic, assetToSend } = get();
+        const { mnemonic, assetToSend, currentNetwork } = get();
         
         if (!mnemonic) {
           throw new Error('Mnémonique non disponible. Veuillez déverrouiller le portefeuille.');
         }
         
-        // Créer le provider pour le réseau Sepolia
-        const provider = new ethers.JsonRpcProvider('https://rpc.sepolia.org');
+        // Créer le provider pour le réseau actuel
+        const provider = new ethers.JsonRpcProvider(currentNetwork.rpcUrl);
         
         // Recréer le portefeuille à partir de la mnémonique
         const wallet = ethers.Wallet.fromPhrase(mnemonic);
