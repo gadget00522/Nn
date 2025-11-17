@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@react-native/new-app-screen": "0.82.1",
+    "alchemy-sdk": "^3.6.5",
     "ethers": "^6.15.0",
     "nativewind": "^4.2.1",
     "react": "19.1.1",

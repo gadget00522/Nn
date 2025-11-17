@@ -7,6 +7,14 @@ import * as Keychain from 'react-native-keychain';
 // Mock the dependencies
 jest.mock('react-native-keychain');
 
+// Mock alchemy-sdk
+jest.mock('alchemy-sdk', () => ({
+  Alchemy: jest.fn(),
+  Network: {
+    ETH_SEPOLIA: 'eth-sepolia',
+  },
+}));
+
 // Create mock functions for ethers
 const mockCreateRandom = jest.fn();
 const mockFromPhrase = jest.fn();
@@ -65,8 +73,7 @@ describe('WalletStore', () => {
       expect(typeof store.actions.unlockWallet).toBe('function');
       expect(typeof store.actions.lockWallet).toBe('function');
       expect(typeof store.actions.wipeWallet).toBe('function');
-      expect(typeof store.actions.fetchBalance).toBe('function');
-      expect(typeof store.actions.fetchTransactionHistory).toBe('function');
+      expect(typeof store.actions.fetchData).toBe('function');
     });
   });
 
@@ -260,29 +267,7 @@ describe('WalletStore', () => {
     });
   });
 
-  describe('fetchBalance', () => {
-    it('should handle when no address is available', async () => {
-      useWalletStore.setState({ address: null });
-
-      await useWalletStore.getState().actions.fetchBalance();
-      store = useWalletStore.getState();
-
-      expect(store.balance).toBe('0');
-    });
-
-    it('should handle fetch balance errors', async () => {
-      useWalletStore.setState({ address: '0x123' });
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-      await useWalletStore.getState().actions.fetchBalance();
-      store = useWalletStore.getState();
-
-      expect(store.balance).toBe('0');
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe('fetchTransactionHistory', () => {
+  describe('fetchData', () => {
     it('should have transactions in initial state', () => {
       store = useWalletStore.getState();
       expect(store.transactions).toBeDefined();
@@ -290,68 +275,25 @@ describe('WalletStore', () => {
     });
 
     it('should not fetch when no address is available', async () => {
-      useWalletStore.setState({ address: null, transactions: [] });
+      useWalletStore.setState({ address: null, balance: '0', transactions: [] });
 
-      await useWalletStore.getState().actions.fetchTransactionHistory();
+      await useWalletStore.getState().actions.fetchData();
       store = useWalletStore.getState();
 
+      expect(store.balance).toBe('0');
       expect(store.transactions).toEqual([]);
     });
 
-    it('should fetch transactions successfully', async () => {
-      const mockTransactions = [
-        {
-          hash: '0xabc123',
-          from: '0x1234567890123456789012345678901234567890',
-          to: '0x0987654321098765432109876543210987654321',
-          value: '1000000000000000000',
-          timeStamp: '1234567890',
-        },
-      ];
-
-      global.fetch = jest.fn(() =>
-        Promise.resolve({
-          json: () => Promise.resolve({ result: mockTransactions }),
-        })
-      );
-
+    it('should handle fetch data errors', async () => {
       useWalletStore.setState({ address: '0x123' });
-
-      await useWalletStore.getState().actions.fetchTransactionHistory();
-      store = useWalletStore.getState();
-
-      expect(store.transactions).toEqual(mockTransactions);
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('api-sepolia.etherscan.io')
-      );
-    });
-
-    it('should handle fetch transaction history errors', async () => {
-      global.fetch = jest.fn(() => Promise.reject(new Error('Network error')));
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      useWalletStore.setState({ address: '0x123' });
-
-      await useWalletStore.getState().actions.fetchTransactionHistory();
+      await useWalletStore.getState().actions.fetchData();
       store = useWalletStore.getState();
 
+      expect(store.balance).toBe('0');
       expect(store.transactions).toEqual([]);
       consoleSpy.mockRestore();
-    });
-
-    it('should handle empty result from API', async () => {
-      global.fetch = jest.fn(() =>
-        Promise.resolve({
-          json: () => Promise.resolve({ result: null }),
-        })
-      );
-
-      useWalletStore.setState({ address: '0x123' });
-
-      await useWalletStore.getState().actions.fetchTransactionHistory();
-      store = useWalletStore.getState();
-
-      expect(store.transactions).toEqual([]);
     });
   });
 });

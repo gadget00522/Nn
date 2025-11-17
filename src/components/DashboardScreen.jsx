@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, Linking } from 'react-native';
 import useWalletStore from '../store/walletStore';
-import { ethers } from 'ethers';
 
 function DashboardScreen() {
   const address = useWalletStore((state) => state.address);
@@ -9,14 +8,12 @@ function DashboardScreen() {
   const transactions = useWalletStore((state) => state.transactions);
   const lockWallet = useWalletStore((state) => state.actions.lockWallet);
   const wipeWallet = useWalletStore((state) => state.actions.wipeWallet);
-  const fetchBalance = useWalletStore((state) => state.actions.fetchBalance);
-  const fetchTransactionHistory = useWalletStore((state) => state.actions.fetchTransactionHistory);
+  const fetchData = useWalletStore((state) => state.actions.fetchData);
   const setScreen = useWalletStore((state) => state.actions.setScreen);
 
   useEffect(() => {
-    fetchBalance();
-    fetchTransactionHistory();
-  }, [fetchBalance, fetchTransactionHistory]);
+    fetchData();
+  }, [fetchData]);
 
   const handleWipeWallet = () => {
     Alert.alert(
@@ -73,26 +70,32 @@ function DashboardScreen() {
       <FlatList
         data={transactions}
         keyExtractor={(item) => item.hash}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.transactionItem}
-            onPress={() => Linking.openURL(`https://sepolia.etherscan.io/tx/${item.hash}`)}>
-            <View style={styles.transactionRow}>
-              <Text style={styles.transactionAmount}>
-                {ethers.formatEther(item.value)} ETH
+        renderItem={({ item }) => {
+          const isSent = item.from.toLowerCase() === address.toLowerCase();
+          const direction = isSent ? 'Envoyé' : 'Reçu';
+          
+          return (
+            <TouchableOpacity
+              style={styles.transactionItem}
+              onPress={() => Linking.openURL(`https://sepolia.etherscan.io/tx/${item.hash}`)}>
+              <View style={styles.transactionRow}>
+                <Text style={styles.transactionAmount}>
+                  {item.value} {item.asset}
+                </Text>
+                <Text style={styles.transactionDate}>
+                  {new Date(item.metadata.blockTimestamp).toLocaleDateString()}
+                </Text>
+              </View>
+              <Text style={styles.transactionDirection}>{direction}</Text>
+              <Text style={styles.transactionAddress} numberOfLines={1}>
+                De: {item.from.slice(0, 6)}...{item.from.slice(-4)}
               </Text>
-              <Text style={styles.transactionDate}>
-                {new Date(parseInt(item.timeStamp, 10) * 1000).toLocaleDateString()}
+              <Text style={styles.transactionAddress} numberOfLines={1}>
+                À: {item.to.slice(0, 6)}...{item.to.slice(-4)}
               </Text>
-            </View>
-            <Text style={styles.transactionAddress} numberOfLines={1}>
-              De: {item.from.slice(0, 6)}...{item.from.slice(-4)}
-            </Text>
-            <Text style={styles.transactionAddress} numberOfLines={1}>
-              À: {item.to.slice(0, 6)}...{item.to.slice(-4)}
-            </Text>
-          </TouchableOpacity>
-        )}
+            </TouchableOpacity>
+          );
+        }}
         ListEmptyComponent={
           <Text style={styles.emptyText}>Aucune transaction</Text>
         }
@@ -178,6 +181,12 @@ const styles = StyleSheet.create({
   transactionDate: {
     fontSize: 14,
     color: '#666',
+  },
+  transactionDirection: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
   },
   transactionAddress: {
     fontSize: 12,

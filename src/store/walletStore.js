@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { ethers } from 'ethers';
 import * as Keychain from 'react-native-keychain';
+import { Alchemy, Network } from 'alchemy-sdk';
 
 const useWalletStore = create((set, get) => ({
   // État initial du store
@@ -101,25 +102,8 @@ const useWalletStore = create((set, get) => ({
       });
     },
 
-    // Récupère le solde du portefeuille
-    fetchBalance: async () => {
-      try {
-        const provider = new ethers.JsonRpcProvider('https://rpc.sepolia.org');
-        const { address } = get();
-        
-        if (address) {
-          const balanceWei = await provider.getBalance(address);
-          const balanceEth = ethers.formatEther(balanceWei);
-          set({ balance: balanceEth });
-        }
-      } catch (error) {
-        console.log('Failed to fetch balance:', error);
-        set({ balance: '0' });
-      }
-    },
-
-    // Récupère l'historique des transactions
-    fetchTransactionHistory: async () => {
+    // Récupère le solde et l'historique des transactions via Alchemy
+    fetchData: async () => {
       try {
         const { address } = get();
         
@@ -127,16 +111,52 @@ const useWalletStore = create((set, get) => ({
           return;
         }
         
-        const API_KEY = 'JW4K4XRS6PFB2GXSMD1R19WT9K36TVXGMM';
-        const url = `https://api-sepolia.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`;
+        // Configure le client Alchemy
+        const settings = {
+          apiKey: "6E1MABBp0KS-gBCc5zXk7",
+          network: Network.ETH_SEPOLIA,
+        };
+        const alchemy = new Alchemy(settings);
         
-        const response = await fetch(url);
-        const json = await response.json();
+        // Récupère le solde
+        const balanceWei = await alchemy.core.getBalance(address);
+        const balanceEth = ethers.formatEther(balanceWei);
+        set({ balance: balanceEth });
         
-        set({ transactions: json.result || [] });
+        // Récupère les transactions envoyées
+        const sentTransfers = await alchemy.core.getAssetTransfers({
+          fromBlock: "0x0",
+          toBlock: "latest",
+          fromAddress: address,
+          category: ["external"],
+          order: "desc",
+          withMetadata: true,
+          maxCount: 20,
+        });
+        
+        // Récupère les transactions reçues
+        const receivedTransfers = await alchemy.core.getAssetTransfers({
+          fromBlock: "0x0",
+          toBlock: "latest",
+          toAddress: address,
+          category: ["external"],
+          order: "desc",
+          withMetadata: true,
+          maxCount: 20,
+        });
+        
+        // Combine et trie les transactions par date
+        const allTransfers = [...sentTransfers.transfers, ...receivedTransfers.transfers];
+        allTransfers.sort((a, b) => {
+          const dateA = new Date(a.metadata.blockTimestamp);
+          const dateB = new Date(b.metadata.blockTimestamp);
+          return dateB - dateA;
+        });
+        
+        set({ transactions: allTransfers.slice(0, 40) });
       } catch (error) {
-        console.log('Failed to fetch transaction history:', error);
-        set({ transactions: [] });
+        console.log('Failed to fetch data:', error);
+        set({ balance: '0', transactions: [] });
       }
     },
 
@@ -185,8 +205,8 @@ const useWalletStore = create((set, get) => ({
         // Attendre la confirmation
         await txResponse.wait();
         
-        // Rafraîchir le solde
-        await get().actions.fetchBalance();
+        // Rafraîchir le solde et les transactions
+        await get().actions.fetchData();
         
         // Retourner au tableau de bord
         get().actions.setScreen('dashboard');
