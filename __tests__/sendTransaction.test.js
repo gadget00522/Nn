@@ -2,8 +2,6 @@
  * @format
  */
 
-import * as Keychain from 'react-native-keychain';
-
 // Mock the dependencies
 jest.mock('react-native-keychain');
 
