@@ -9,6 +9,9 @@ const useWalletStore = create((set, get) => ({
   isWalletCreated: false,
   isWalletUnlocked: false,
   balance: '0',
+  currentScreen: 'dashboard',
+  isSending: false,
+  sendError: null,
 
   // Actions
   actions: {
@@ -100,6 +103,64 @@ const useWalletStore = create((set, get) => ({
       } catch (error) {
         console.log('Failed to fetch balance:', error);
         set({ balance: '0' });
+      }
+    },
+
+    // Change l'écran actuel
+    setScreen: (screenName) => {
+      set({ currentScreen: screenName });
+    },
+
+    // Envoie une transaction ETH
+    sendTransaction: async (toAddress, amount) => {
+      set({ isSending: true, sendError: null });
+      
+      try {
+        const { mnemonic } = get();
+        
+        if (!mnemonic) {
+          throw new Error('Mnémonique non disponible. Veuillez déverrouiller le portefeuille.');
+        }
+        
+        // Créer le provider pour le réseau Sepolia
+        const provider = new ethers.JsonRpcProvider('https://rpc.sepolia.org');
+        
+        // Recréer le portefeuille à partir de la mnémonique
+        const wallet = ethers.Wallet.fromPhrase(mnemonic);
+        
+        // Connecter le portefeuille au provider
+        const connectedWallet = wallet.connect(provider);
+        
+        // Valider l'adresse du destinataire
+        if (!ethers.isAddress(toAddress)) {
+          throw new Error('Adresse du destinataire invalide.');
+        }
+        
+        // Convertir le montant en wei
+        const txValue = ethers.parseEther(amount);
+        
+        // Construire l'objet de transaction
+        const tx = {
+          to: toAddress,
+          value: txValue,
+        };
+        
+        // Envoyer la transaction
+        const txResponse = await connectedWallet.sendTransaction(tx);
+        
+        // Attendre la confirmation
+        await txResponse.wait();
+        
+        // Rafraîchir le solde
+        await get().actions.fetchBalance();
+        
+        // Retourner au tableau de bord
+        get().actions.setScreen('dashboard');
+        
+      } catch (error) {
+        set({ sendError: error.message });
+      } finally {
+        set({ isSending: false });
       }
     },
   },

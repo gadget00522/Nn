@@ -8,6 +8,7 @@ function DashboardScreen() {
   const lockWallet = useWalletStore((state) => state.actions.lockWallet);
   const wipeWallet = useWalletStore((state) => state.actions.wipeWallet);
   const fetchBalance = useWalletStore((state) => state.actions.fetchBalance);
+  const setScreen = useWalletStore((state) => state.actions.setScreen);
 
   useEffect(() => {
     fetchBalance();
@@ -44,6 +45,10 @@ function DashboardScreen() {
         <Text style={styles.label}>Solde :</Text>
         <Text style={styles.balance}>{balance} ETH</Text>
       </View>
+
+      <TouchableOpacity style={styles.button} onPress={() => setScreen('send')}>
+        <Text style={styles.buttonText}>Envoyer</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity style={styles.button} onPress={lockWallet}>
         <Text style={styles.buttonText}>Verrouiller</Text>

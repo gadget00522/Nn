@@ -13,6 +13,7 @@ import OnboardingScreen from './src/components/OnboardingScreen';
 import BackupScreen from './src/components/BackupScreen';
 import LockedScreen from './src/components/LockedScreen';
 import DashboardScreen from './src/components/DashboardScreen';
+import SendScreen from './src/components/SendScreen';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -31,6 +32,7 @@ function AppContent() {
   
   const isWalletCreated = useWalletStore((state) => state.isWalletCreated);
   const isWalletUnlocked = useWalletStore((state) => state.isWalletUnlocked);
+  const currentScreen = useWalletStore((state) => state.currentScreen);
   const checkStorage = useWalletStore((state) => state.actions.checkStorage);
 
   useEffect(() => {
@@ -55,7 +57,12 @@ function AppContent() {
   } else if (!isWalletUnlocked) {
     screen = <LockedScreen />;
   } else {
-    screen = <DashboardScreen />;
+    // Wallet is unlocked, show screen based on currentScreen state
+    if (currentScreen === 'send') {
+      screen = <SendScreen />;
+    } else {
+      screen = <DashboardScreen />;
+    }
   }
 
   return (
