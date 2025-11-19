@@ -6,6 +6,7 @@ import Toast from 'react-native-toast-message';
 
 import OnboardingScreen from './src/components/OnboardingScreen.jsx';
 import BackupScreen from './src/components/BackupScreen.jsx';
+import BackupVerifyScreen from './src/components/BackupVerifyScreen.jsx';
 import LockedScreen from './src/components/LockedScreen.jsx';
 import DashboardScreen from './src/components/DashboardScreen.jsx';
 import SendScreen from './src/components/SendScreen.jsx';
@@ -26,7 +27,13 @@ export default function App() {
           {!isWalletCreated ? (
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           ) : needsBackup ? (
-            <Stack.Screen name="Backup" component={BackupScreen} />
+            <>
+              <Stack.Screen name="Backup" component={BackupScreen} />
+              <Stack.Screen
+                name="BackupVerify"
+                component={BackupVerifyScreen}
+              />
+            </>
           ) : !isWalletUnlocked ? (
             <Stack.Screen name="Locked" component={LockedScreen} />
           ) : (
@@ -41,5 +48,3 @@ export default function App() {
     </PaperProvider>
   );
 }
-
-
