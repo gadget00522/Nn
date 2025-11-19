@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import useWalletStore from '../store/walletStore';
 
 function BackupScreen() {
@@ -13,8 +14,21 @@ function BackupScreen() {
   const mnemonic = useWalletStore((state) => state.mnemonic);
   const setScreen = useWalletStore((state) => state.actions.setScreen);
 
+  const navigation = useNavigation();
+
   const handleContinue = () => {
+    // Garder l’ancienne logique basée sur currentScreen
     setScreen('backupVerify');
+
+    // Si on est dans une Navigation Stack (App.tsx), naviguer vers l’écran dédié
+    try {
+      if (navigation && typeof navigation.navigate === 'function') {
+        navigation.navigate('BackupVerify');
+      }
+    } catch (e) {
+      // Sur les environnements où la navigation n’est pas dispo, on ignore
+      console.log('Navigation to BackupVerify failed or not available:', e);
+    }
   };
 
   return (
