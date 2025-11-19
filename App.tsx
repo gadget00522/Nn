@@ -4,17 +4,13 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Provider as PaperProvider } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
 
-// CORRECTION DES CHEMINS : On utilise 'screens' au lieu de 'components'
-// Si ça plante encore, vérifie si tes dossiers s'appellent 'screens' ou 'components'
-import OnboardingScreen from './src/screens/OnboardingScreen';
-import BackupScreen from './src/screens/BackupScreen';
-import LockedScreen from './src/screens/LockedScreen';
-import DashboardScreen from './src/screens/DashboardScreen';
-import SendScreen from './src/screens/SendScreen';
-// import ReceiveScreen from './src/screens/ReceiveScreen'; // Décommente si le fichier existe
-// import BackupVerifyScreen from './src/screens/BackupVerifyScreen'; // Décommente si le fichier existe
+import OnboardingScreen from './src/components/OnboardingScreen.jsx';
+import BackupScreen from './src/components/BackupScreen.jsx';
+import LockedScreen from './src/components/LockedScreen.jsx';
+import DashboardScreen from './src/components/DashboardScreen.jsx';
+import SendScreen from './src/components/SendScreen.jsx';
 
-import { useWalletStore } from './src/store/walletStore';
+import useWalletStore from './src/store/walletStore';
 
 const Stack = createNativeStackNavigator();
 

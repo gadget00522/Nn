@@ -142,7 +142,7 @@ const useWalletStore = create((set, get) => ({
         
         // Récupère le solde
         const balanceWei = await alchemy.core.getBalance(address);
-        const balanceEth = ethers.formatEther(balanceWei);
+        const balanceEth = ethers.utils.formatEther(balanceWei);
         
         // --- Récupérer les soldes des tokens ---
         const tokenBalancesResponse = await alchemy.core.getTokenBalances(address);
@@ -247,7 +247,7 @@ const useWalletStore = create((set, get) => ({
         }
         
         // Créer le provider pour le réseau actif
-        const provider = new ethers.JsonRpcProvider(currentNetwork.rpcUrl);
+        const provider = new ethers.providers.JsonRpcProvider(currentNetwork.rpcUrl);
         
         // Recréer le portefeuille à partir de la mnémonique
         const wallet = ethers.Wallet.fromPhrase(mnemonic);
@@ -256,7 +256,7 @@ const useWalletStore = create((set, get) => ({
         const connectedWallet = wallet.connect(provider);
         
         // Valider l'adresse du destinataire
-        if (!ethers.isAddress(toAddress)) {
+        if (!ethers.utils.isAddress(toAddress)) {
           throw new Error('Adresse du destinataire invalide.');
         }
         
@@ -268,7 +268,7 @@ const useWalletStore = create((set, get) => ({
           const tokenContract = new ethers.Contract(assetToSend.contractAddress, tokenAbi, connectedWallet);
           
           // Convertir le montant en utilisant les décimales du token
-          const amountToSend = ethers.parseUnits(amount, assetToSend.decimals);
+          const amountToSend = ethers.utils.parseUnits(amount, assetToSend.decimals);
           
           // Appeler la fonction `transfer` du contrat
           const tx = await tokenContract.transfer(toAddress, amountToSend);
@@ -277,7 +277,7 @@ const useWalletStore = create((set, get) => ({
         } else {
           // CAS 2 : C'est de l'ETH (logique existante)
           // Convertir le montant en wei
-          const txValue = ethers.parseEther(amount);
+          const txValue = ethers.utils.parseEther(amount);
           
           // Construire l'objet de transaction
           const tx = {
