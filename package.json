@@ -5,6 +5,7 @@
   "homepage": "https://pulseailab.me",
   "scripts": {
     "web": "webpack serve --mode development",
+    "start": "npm run build && npx serve -s dist",
     "build": "webpack --mode production"
   },
   "dependencies": {
@@ -20,6 +21,7 @@
     "expo": "^52.0.0",
     "expo-asset": "^11.0.0",
     "expo-font": "^13.0.0",
+    "firebase": "^10.0.0",
     "nativewind": "^2.0.11",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -48,6 +50,7 @@
     "gh-pages": "^6.0.0",
     "html-webpack-plugin": "^5.5.3",
     "metro-react-native-babel-preset": "^0.77.0",
+    "serve": "^14.2.0",
     "tailwindcss": "^3.3.2",
     "typescript": "^5.0.2",
     "webpack": "^5.88.0",
