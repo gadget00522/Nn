@@ -17,16 +17,15 @@ function BackupScreen() {
   const navigation = useNavigation();
 
   const handleContinue = () => {
-    // Garder l’ancienne logique basée sur currentScreen
+    // Pour l’ancienne logique (App.jsx)
     setScreen('backupVerify');
 
-    // Si on est dans une Navigation Stack (App.tsx), naviguer vers l’écran dédié
+    // Pour la navigation (App.tsx / web)
     try {
       if (navigation && typeof navigation.navigate === 'function') {
         navigation.navigate('BackupVerify');
       }
     } catch (e) {
-      // Sur les environnements où la navigation n’est pas dispo, on ignore
       console.log('Navigation to BackupVerify failed or not available:', e);
     }
   };
