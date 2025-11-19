@@ -17,19 +17,17 @@ const babelLoaderConfiguration = {
     loader: 'babel-loader',
     options: {
       cacheDirectory: true,
-      // C'EST ICI LA CORRECTION MAGIQUE :
+      // On ignore les configs externes pour éviter les conflits
       babelrc: false,
       configFile: false,
-      // On définit les règles ici, proprement :
       presets: [
         ['@babel/preset-env', { targets: { browsers: ['last 2 versions'] } }],
         '@babel/preset-react',
         '@babel/preset-typescript',
       ],
       plugins: [
+        // Seul plugin essentiel pour le web :
         ['react-native-web', { commonjs: true }],
-        '@babel/plugin-proposal-export-namespace-from',
-        'react-native-reanimated/plugin',
       ],
     },
   },
