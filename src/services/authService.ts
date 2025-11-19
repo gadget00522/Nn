@@ -5,6 +5,8 @@ import {
   sendPasswordResetEmail,
   User,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
@@ -46,6 +48,22 @@ export async function loginWithEmail(
 
 export async function requestPasswordReset(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email);
+}
+
+/**
+ * Sign in with Google using popup (web only)
+ * Returns an AuthUser object with email, uid, and emailVerified status
+ * Google accounts are automatically email verified by Firebase
+ */
+export async function loginWithGoogle(): Promise<AuthUser> {
+  const provider = new GoogleAuthProvider();
+  const cred = await signInWithPopup(auth, provider);
+  const user = cred.user;
+  return {
+    email: user.email,
+    uid: user.uid,
+    emailVerified: user.emailVerified,
+  };
 }
 
 export function observeAuthState(callback: (user: AuthUser | null) => void) {

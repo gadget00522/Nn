@@ -62,11 +62,13 @@ const firebaseConfig = {
 1. **Authentication Screen** - First screen shown to unauthenticated users
    - Sign up with email/password
    - Log in with existing account
+   - **Sign in with Google** (NEW)
    - Request password reset
 
-2. **Email Verification** - Required after signup
+2. **Email Verification** - Required after signup with email/password
    - Verification email sent automatically
    - User must verify email before accessing wallet
+   - Google sign-in users are automatically verified
 
 3. **Wallet Flow** - After authentication and email verification
    - Create wallet or unlock existing wallet
@@ -76,15 +78,45 @@ const firebaseConfig = {
 - Firebase authentication is bypassed
 - Users go directly to wallet creation/unlock flow
 
+### Google Authentication
+
+**Prerequisites:**
+1. Enable Google as a sign-in provider in Firebase Console:
+   - Go to Firebase Console → Authentication → Sign-in method
+   - Enable Google provider
+   - Add authorized domains (for local testing: `localhost` and your production domain)
+2. Configure OAuth consent screen (Internal consent screen is sufficient for testing)
+
+**Features:**
+- One-click authentication with Google account
+- Automatic email verification (no verification email needed)
+- Seamless wallet linking: If a wallet exists locally, it's automatically linked to your Google account
+- If no wallet exists, you'll be prompted to create or import one after signing in
+
+**Usage:**
+1. Navigate to the authentication screen
+2. Click "🔍 Continuer avec Google"
+3. Select your Google account in the popup
+4. If you have an existing wallet, it will be automatically linked
+5. If not, you'll be prompted to create or import a wallet
+
+**Security:**
+- Only your wallet address (public) is stored in Firebase
+- Your mnemonic/private keys remain encrypted locally
+- Google authentication uses Firebase's secure OAuth 2.0 flow
+
 ### Firebase Service Files
 
 - **src/firebaseConfig.ts**: Initializes Firebase with project credentials
 - **src/services/authService.ts**: Authentication functions
   - `signupWithEmail(email, password)`: Create new account
   - `loginWithEmail(email, password)`: Sign in to existing account
+  - `loginWithGoogle()`: Sign in with Google (web only)
   - `requestPasswordReset(email)`: Send password reset email
   - `observeAuthState(callback)`: Monitor authentication state changes
-- **src/screens/AuthScreen.tsx**: UI for signup/login/password reset
+  - `linkWalletAddressToUser(uid, address)`: Link wallet address to user account
+  - `getUserWalletAddress(uid)`: Retrieve wallet address for a user
+- **src/screens/AuthScreen.tsx**: UI for signup/login/password reset/Google sign-in
 
 ### Testing the Complete Flow on Web
 
