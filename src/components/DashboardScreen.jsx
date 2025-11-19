@@ -214,6 +214,19 @@ function DashboardScreen() {
           <Text style={styles.actionIcon}>💰</Text>
           <Text style={styles.actionButtonText}>Vendre</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.actionButton, styles.primaryAction]} onPress={() => {
+          if (navigation && typeof navigation.navigate === 'function') {
+            try {
+              navigation.navigate('Scan');
+            } catch (e) {
+              console.log('Navigation to Scan failed:', e);
+            }
+          }
+        }}>
+          <Text style={styles.actionIcon}>📱</Text>
+          <Text style={styles.actionButtonText}>Scan</Text>
+        </TouchableOpacity>
       </View>
 
       {Platform.OS !== 'web' && (

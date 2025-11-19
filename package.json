@@ -9,10 +9,17 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@json-rpc-tools/utils": "^1.7.6",
     "@react-navigation/native": "^6.1.9",
     "@react-navigation/native-stack": "^6.9.17",
+    "@walletconnect/core": "^2.23.0",
+    "@walletconnect/utils": "^2.23.0",
+    "@walletconnect/web3wallet": "^1.16.1",
     "alchemy-sdk": "^3.0.0",
     "ethers": "^5.7.2",
+    "expo": "^52.0.0",
+    "expo-asset": "^11.0.0",
+    "expo-font": "^13.0.0",
     "nativewind": "^2.0.11",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -23,11 +30,8 @@
     "react-native-toast-message": "^2.1.6",
     "react-native-vector-icons": "^10.0.0",
     "react-native-web": "^0.19.9",
-    "zustand": "^4.4.0",
-
-    "expo": "^52.0.0",
-    "expo-asset": "^11.0.0",
-    "expo-font": "^13.0.0"
+    "react-qr-reader": "^3.0.0-beta-1",
+    "zustand": "^4.4.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

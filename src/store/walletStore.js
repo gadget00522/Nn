@@ -38,6 +38,9 @@ const useWalletStore = create((set, get) => ({
   tokenBalances: [],
   assetToSend: null,
   currentNetwork: SUPPORTED_NETWORKS[0],
+  
+  // WalletConnect state
+  walletConnectRequest: null, // Stores pending WalletConnect requests (session proposals, sign requests, etc.)
 
   // Actions
   actions: {
@@ -334,6 +337,205 @@ const useWalletStore = create((set, get) => ({
         set({ sendError: error.message });
       } finally {
         set({ isSending: false });
+      }
+    },
+
+    // WalletConnect Actions
+    
+    /**
+     * Store a WalletConnect request (session proposal or sign request)
+     * @param request - The WalletConnect request object
+     */
+    setWalletConnectRequest: (request) => {
+      set({ walletConnectRequest: request });
+    },
+
+    /**
+     * Clear the current WalletConnect request
+     */
+    clearWalletConnectRequest: () => {
+      set({ walletConnectRequest: null });
+    },
+
+    /**
+     * Approve a WalletConnect session proposal
+     * Requires WalletConnectService to be initialized
+     */
+    approveSession: async () => {
+      const { walletConnectRequest, address, currentNetwork } = get();
+      
+      if (!walletConnectRequest || walletConnectRequest.type !== 'session_proposal') {
+        console.error('No session proposal to approve');
+        return;
+      }
+
+      try {
+        const WalletConnectService = (await import('../services/WalletConnectService')).default;
+        const wcService = WalletConnectService.getInstance();
+        
+        // Format account as CAIP-10 format: eip155:chainId:address
+        const accounts = [`eip155:${currentNetwork.chainId}:${address}`];
+        
+        await wcService.approveSession(
+          walletConnectRequest.id,
+          accounts,
+          currentNetwork.chainId
+        );
+        
+        // Clear the request after approval
+        set({ walletConnectRequest: null });
+      } catch (error) {
+        console.error('Failed to approve session:', error);
+        throw error;
+      }
+    },
+
+    /**
+     * Reject a WalletConnect session proposal
+     */
+    rejectSession: async () => {
+      const { walletConnectRequest } = get();
+      
+      if (!walletConnectRequest || walletConnectRequest.type !== 'session_proposal') {
+        console.error('No session proposal to reject');
+        return;
+      }
+
+      try {
+        const WalletConnectService = (await import('../services/WalletConnectService')).default;
+        const wcService = WalletConnectService.getInstance();
+        
+        await wcService.rejectSession(walletConnectRequest.id);
+        
+        // Clear the request after rejection
+        set({ walletConnectRequest: null });
+      } catch (error) {
+        console.error('Failed to reject session:', error);
+        throw error;
+      }
+    },
+
+    /**
+     * Approve a WalletConnect request (sign transaction/message)
+     * Signs the data with the wallet's private key
+     */
+    approveRequest: async () => {
+      const { walletConnectRequest, mnemonic, currentNetwork } = get();
+      
+      if (!walletConnectRequest || walletConnectRequest.type !== 'session_request') {
+        console.error('No session request to approve');
+        return;
+      }
+
+      if (!mnemonic) {
+        throw new Error('Wallet not unlocked');
+      }
+
+      try {
+        const WalletConnectService = (await import('../services/WalletConnectService')).default;
+        const wcService = WalletConnectService.getInstance();
+        
+        // Recreate wallet from mnemonic
+        const wallet = ethers.Wallet.fromPhrase(mnemonic);
+        const provider = new ethers.providers.JsonRpcProvider(currentNetwork.rpcUrl);
+        const connectedWallet = wallet.connect(provider);
+        
+        const { topic, id, params } = walletConnectRequest;
+        const { request } = params;
+        
+        let result;
+        
+        // Handle different request methods
+        switch (request.method) {
+          case 'eth_sign':
+          case 'personal_sign':
+            // Sign a message
+            const message = request.params[0];
+            result = await connectedWallet.signMessage(
+              ethers.utils.isHexString(message) 
+                ? ethers.utils.arrayify(message) 
+                : message
+            );
+            break;
+            
+          case 'eth_signTypedData':
+          case 'eth_signTypedData_v4':
+            // Sign typed data
+            const typedData = JSON.parse(request.params[1]);
+            result = await connectedWallet._signTypedData(
+              typedData.domain,
+              typedData.types,
+              typedData.message
+            );
+            break;
+            
+          case 'eth_sendTransaction':
+          case 'eth_signTransaction':
+            // Sign or send transaction
+            const txRequest = request.params[0];
+            
+            // Format transaction
+            const tx = {
+              to: txRequest.to,
+              value: txRequest.value ? ethers.BigNumber.from(txRequest.value) : undefined,
+              data: txRequest.data,
+              gasLimit: txRequest.gas ? ethers.BigNumber.from(txRequest.gas) : undefined,
+              gasPrice: txRequest.gasPrice ? ethers.BigNumber.from(txRequest.gasPrice) : undefined,
+            };
+            
+            if (request.method === 'eth_sendTransaction') {
+              // Send the transaction
+              const txResponse = await connectedWallet.sendTransaction(tx);
+              result = txResponse.hash;
+            } else {
+              // Just sign the transaction
+              const signedTx = await connectedWallet.signTransaction(tx);
+              result = signedTx;
+            }
+            break;
+            
+          default:
+            throw new Error(`Unsupported method: ${request.method}`);
+        }
+        
+        // Respond with the result
+        await wcService.respondRequest(topic, id, result);
+        
+        // Clear the request after approval
+        set({ walletConnectRequest: null });
+        
+        // Refresh balance if transaction was sent
+        if (request.method === 'eth_sendTransaction') {
+          await get().actions.fetchData();
+        }
+      } catch (error) {
+        console.error('Failed to approve request:', error);
+        throw error;
+      }
+    },
+
+    /**
+     * Reject a WalletConnect request
+     */
+    rejectRequest: async () => {
+      const { walletConnectRequest } = get();
+      
+      if (!walletConnectRequest || walletConnectRequest.type !== 'session_request') {
+        console.error('No session request to reject');
+        return;
+      }
+
+      try {
+        const WalletConnectService = (await import('../services/WalletConnectService')).default;
+        const wcService = WalletConnectService.getInstance();
+        
+        await wcService.rejectRequest(walletConnectRequest.topic, walletConnectRequest.id);
+        
+        // Clear the request after rejection
+        set({ walletConnectRequest: null });
+      } catch (error) {
+        console.error('Failed to reject request:', error);
+        throw error;
       }
     },
   },
