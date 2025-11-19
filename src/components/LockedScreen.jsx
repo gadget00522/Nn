@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Platform,
+} from 'react-native';
 import Toast from 'react-native-toast-message';
 import useWalletStore from '../store/walletStore';
 
@@ -17,7 +24,7 @@ function LockedScreen() {
       });
       return;
     }
-    
+
     setIsUnlocking(true);
     try {
       await unlockWallet(password);
@@ -30,7 +37,7 @@ function LockedScreen() {
       Toast.show({
         type: 'error',
         text1: 'Erreur',
-        text2: error.message || 'Échec du déverrouillage',
+        text2: error?.message || 'Échec du déverrouillage',
       });
     } finally {
       setIsUnlocking(false);
@@ -41,7 +48,8 @@ function LockedScreen() {
     Toast.show({
       type: 'info',
       text1: 'Mot de passe oublié',
-      text2: 'Veuillez restaurer votre portefeuille avec la phrase de récupération',
+      text2:
+        'Pour cette démo, utilisez votre phrase de récupération pour restaurer le portefeuille.',
     });
   };
 
@@ -51,9 +59,9 @@ function LockedScreen() {
         <Text style={styles.logo}>🦊</Text>
         <Text style={styles.brandName}>Malin Wallet</Text>
       </View>
-      
+
       <Text style={styles.welcomeText}>Heureux de vous revoir !</Text>
-      
+
       {Platform.OS === 'web' ? (
         <View style={styles.formContainer}>
           <Text style={styles.label}>Mot de passe</Text>
@@ -68,31 +76,31 @@ function LockedScreen() {
             autoCorrect={false}
             editable={!isUnlocking}
           />
-          
-          <TouchableOpacity 
-            style={[styles.button, isUnlocking && styles.buttonDisabled]} 
+
+          <TouchableOpacity
+            style={[styles.button, isUnlocking && styles.buttonDisabled]}
             onPress={handleUnlock}
-            disabled={isUnlocking}>
+            disabled={isUnlocking}
+          >
             <Text style={styles.buttonText}>
               {isUnlocking ? 'Déverrouillage...' : 'Déverrouiller'}
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity onPress={handleForgotPassword}>
             <Text style={styles.forgotPassword}>Mot de passe oublié ?</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <>
-          <TouchableOpacity 
-            style={[styles.button, isUnlocking && styles.buttonDisabled]} 
-            onPress={handleUnlock}
-            disabled={isUnlocking}>
-            <Text style={styles.buttonText}>
-              {isUnlocking ? 'Déverrouillage...' : 'Déverrouiller'}
-            </Text>
-          </TouchableOpacity>
-        </>
+        <TouchableOpacity
+          style={[styles.button, isUnlocking && styles.buttonDisabled]}
+          onPress={handleUnlock}
+          disabled={isUnlocking}
+        >
+          <Text style={styles.buttonText}>
+            {isUnlocking ? 'Déverrouillage...' : 'Déverrouiller'}
+          </Text>
+        </TouchableOpacity>
       )}
     </View>
   );
