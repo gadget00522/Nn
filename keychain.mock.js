@@ -23,4 +23,3 @@ export const resetGenericPassword = async (options) => {
 export const ACCESS_CONTROL = {};
 export const ACCESSIBLE = {};
 export const AUTHENTICATION_TYPE = {};
-
