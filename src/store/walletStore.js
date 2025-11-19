@@ -60,35 +60,39 @@ const useWalletStore = create((set, get) => ({
   tokenBalances: [],
   assetToSend: null,
   currentNetwork: SUPPORTED_NETWORKS[0],
+  
+  // WalletConnect state
+  walletConnectRequest: null, // Stores pending WalletConnect requests (session proposals, sign requests, etc.)
 
   // Actions
   actions: {
     // Vérifie si un portefeuille existe dans le stockage
     checkStorage: async () => {
       try {
+        const credentials = await Keychain.getGenericPassword();
+        const walletExists = !!credentials;
+        
+        // On web, check for additional persisted state
         if (Platform.OS === 'web') {
-          // Web : vérifier localStorage (demo)
-          const webMnemonic = webStorage.getItem('wallet_mnemonic');
-          const webPassword = webStorage.getItem('wallet_password');
-          const walletExists = !!webMnemonic && !!webPassword;
-          set({ isWalletCreated: walletExists });
-
-          // Si le wallet existe déjà et qu'on n'est pas en mode backup, on peut auto-déverrouiller
-          if (walletExists) {
-            const wallet = ethers.Wallet.fromPhrase(webMnemonic);
-            const state = get();
-            if (!state.needsBackup) {
-              set({
-                mnemonic: webMnemonic,
-                address: wallet.address,
-                isWalletUnlocked: true,
-              });
-            }
+          // Load persisted backup status
+          const needsBackupStored = localStorage.getItem('wallet_needsBackup');
+          const needsBackup = needsBackupStored === 'true';
+          
+          set({ 
+            isWalletCreated: walletExists,
+            needsBackup: needsBackup 
+          });
+          
+          // Auto-unlock if wallet exists and backup is completed
+          if (walletExists && credentials && !needsBackup) {
+            const wallet = ethers.Wallet.fromPhrase(credentials.password);
+            set({
+              mnemonic: credentials.password,
+              address: wallet.address,
+              isWalletUnlocked: true,
+            });
           }
         } else {
-          // Native : Keychain
-          const credentials = await Keychain.getGenericPassword();
-          const walletExists = !!credentials;
           set({ isWalletCreated: walletExists });
         }
       } catch (error) {
@@ -113,6 +117,11 @@ const useWalletStore = create((set, get) => ({
         });
       }
 
+      // On web, persist backup status
+      if (Platform.OS === 'web') {
+        localStorage.setItem('wallet_needsBackup', 'true');
+      }
+
       set({
         mnemonic: phrase,
         address: wallet.address,
@@ -126,6 +135,11 @@ const useWalletStore = create((set, get) => ({
 
     // Vérifie la sauvegarde et déverrouille le portefeuille
     verifyBackup: () => {
+      // On web, persist backup completion
+      if (Platform.OS === 'web') {
+        localStorage.setItem('wallet_needsBackup', 'false');
+      }
+      
       set({
         needsBackup: false,
         isWalletUnlocked: true,
@@ -194,17 +208,13 @@ const useWalletStore = create((set, get) => ({
 
     // Efface complètement le portefeuille
     wipeWallet: async () => {
-      try {
-        if (Platform.OS === 'web') {
-          webStorage.removeItem('wallet_mnemonic');
-          webStorage.removeItem('wallet_password');
-        } else {
-          await Keychain.resetGenericPassword();
-        }
-      } catch (e) {
-        console.log('wipeWallet error:', e);
+      await Keychain.resetGenericPassword();
+      
+      // On web, clear all persisted data
+      if (Platform.OS === 'web') {
+        localStorage.removeItem('wallet_needsBackup');
       }
-
+      
       set({
         mnemonic: null,
         address: null,
@@ -376,6 +386,205 @@ const useWalletStore = create((set, get) => ({
         set({ sendError: error.message });
       } finally {
         set({ isSending: false });
+      }
+    },
+
+    // WalletConnect Actions
+    
+    /**
+     * Store a WalletConnect request (session proposal or sign request)
+     * @param request - The WalletConnect request object
+     */
+    setWalletConnectRequest: (request) => {
+      set({ walletConnectRequest: request });
+    },
+
+    /**
+     * Clear the current WalletConnect request
+     */
+    clearWalletConnectRequest: () => {
+      set({ walletConnectRequest: null });
+    },
+
+    /**
+     * Approve a WalletConnect session proposal
+     * Requires WalletConnectService to be initialized
+     */
+    approveSession: async () => {
+      const { walletConnectRequest, address, currentNetwork } = get();
+      
+      if (!walletConnectRequest || walletConnectRequest.type !== 'session_proposal') {
+        console.error('No session proposal to approve');
+        return;
+      }
+
+      try {
+        const WalletConnectService = (await import('../services/WalletConnectService')).default;
+        const wcService = WalletConnectService.getInstance();
+        
+        // Format account as CAIP-10 format: eip155:chainId:address
+        const accounts = [`eip155:${currentNetwork.chainId}:${address}`];
+        
+        await wcService.approveSession(
+          walletConnectRequest.id,
+          accounts,
+          currentNetwork.chainId
+        );
+        
+        // Clear the request after approval
+        set({ walletConnectRequest: null });
+      } catch (error) {
+        console.error('Failed to approve session:', error);
+        throw error;
+      }
+    },
+
+    /**
+     * Reject a WalletConnect session proposal
+     */
+    rejectSession: async () => {
+      const { walletConnectRequest } = get();
+      
+      if (!walletConnectRequest || walletConnectRequest.type !== 'session_proposal') {
+        console.error('No session proposal to reject');
+        return;
+      }
+
+      try {
+        const WalletConnectService = (await import('../services/WalletConnectService')).default;
+        const wcService = WalletConnectService.getInstance();
+        
+        await wcService.rejectSession(walletConnectRequest.id);
+        
+        // Clear the request after rejection
+        set({ walletConnectRequest: null });
+      } catch (error) {
+        console.error('Failed to reject session:', error);
+        throw error;
+      }
+    },
+
+    /**
+     * Approve a WalletConnect request (sign transaction/message)
+     * Signs the data with the wallet's private key
+     */
+    approveRequest: async () => {
+      const { walletConnectRequest, mnemonic, currentNetwork } = get();
+      
+      if (!walletConnectRequest || walletConnectRequest.type !== 'session_request') {
+        console.error('No session request to approve');
+        return;
+      }
+
+      if (!mnemonic) {
+        throw new Error('Wallet not unlocked');
+      }
+
+      try {
+        const WalletConnectService = (await import('../services/WalletConnectService')).default;
+        const wcService = WalletConnectService.getInstance();
+        
+        // Recreate wallet from mnemonic
+        const wallet = ethers.Wallet.fromPhrase(mnemonic);
+        const provider = new ethers.providers.JsonRpcProvider(currentNetwork.rpcUrl);
+        const connectedWallet = wallet.connect(provider);
+        
+        const { topic, id, params } = walletConnectRequest;
+        const { request } = params;
+        
+        let result;
+        
+        // Handle different request methods
+        switch (request.method) {
+          case 'eth_sign':
+          case 'personal_sign':
+            // Sign a message
+            const message = request.params[0];
+            result = await connectedWallet.signMessage(
+              ethers.utils.isHexString(message) 
+                ? ethers.utils.arrayify(message) 
+                : message
+            );
+            break;
+            
+          case 'eth_signTypedData':
+          case 'eth_signTypedData_v4':
+            // Sign typed data
+            const typedData = JSON.parse(request.params[1]);
+            result = await connectedWallet._signTypedData(
+              typedData.domain,
+              typedData.types,
+              typedData.message
+            );
+            break;
+            
+          case 'eth_sendTransaction':
+          case 'eth_signTransaction':
+            // Sign or send transaction
+            const txRequest = request.params[0];
+            
+            // Format transaction
+            const tx = {
+              to: txRequest.to,
+              value: txRequest.value ? ethers.BigNumber.from(txRequest.value) : undefined,
+              data: txRequest.data,
+              gasLimit: txRequest.gas ? ethers.BigNumber.from(txRequest.gas) : undefined,
+              gasPrice: txRequest.gasPrice ? ethers.BigNumber.from(txRequest.gasPrice) : undefined,
+            };
+            
+            if (request.method === 'eth_sendTransaction') {
+              // Send the transaction
+              const txResponse = await connectedWallet.sendTransaction(tx);
+              result = txResponse.hash;
+            } else {
+              // Just sign the transaction
+              const signedTx = await connectedWallet.signTransaction(tx);
+              result = signedTx;
+            }
+            break;
+            
+          default:
+            throw new Error(`Unsupported method: ${request.method}`);
+        }
+        
+        // Respond with the result
+        await wcService.respondRequest(topic, id, result);
+        
+        // Clear the request after approval
+        set({ walletConnectRequest: null });
+        
+        // Refresh balance if transaction was sent
+        if (request.method === 'eth_sendTransaction') {
+          await get().actions.fetchData();
+        }
+      } catch (error) {
+        console.error('Failed to approve request:', error);
+        throw error;
+      }
+    },
+
+    /**
+     * Reject a WalletConnect request
+     */
+    rejectRequest: async () => {
+      const { walletConnectRequest } = get();
+      
+      if (!walletConnectRequest || walletConnectRequest.type !== 'session_request') {
+        console.error('No session request to reject');
+        return;
+      }
+
+      try {
+        const WalletConnectService = (await import('../services/WalletConnectService')).default;
+        const wcService = WalletConnectService.getInstance();
+        
+        await wcService.rejectRequest(walletConnectRequest.topic, walletConnectRequest.id);
+        
+        // Clear the request after rejection
+        set({ walletConnectRequest: null });
+      } catch (error) {
+        console.error('Failed to reject request:', error);
+        throw error;
       }
     },
   },

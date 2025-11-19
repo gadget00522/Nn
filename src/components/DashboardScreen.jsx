@@ -256,36 +256,25 @@ function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Liste des jetons */}
-        {activeTab === 'tokens' && (
-          <View style={styles.tokenList}>
-            {assets.map((item, index) => (
-              <TouchableOpacity
-                key={item.contractAddress || index}
-                style={styles.tokenItem}
-                onPress={() => handleSend(item)}
-              >
-                <View style={styles.tokenIcon}>
-                  <Text style={styles.tokenIconText}>
-                    {item.contractAddress ? '🪙' : '💎'}
-                  </Text>
-                </View>
-                <View style={styles.tokenInfo}>
-                  <Text style={styles.tokenSymbol}>{item.symbol}</Text>
-                  <Text style={styles.tokenName}>
-                    {item.contractAddress ? 'Token' : currentNetwork.name}
-                  </Text>
-                </View>
-                <View style={styles.tokenBalance}>
-                  <Text style={styles.tokenBalanceAmount}>
-                    {parseFloat(item.balance || '0').toFixed(4)}
-                  </Text>
-                  <Text style={styles.tokenBalanceSymbol}>{item.symbol}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+      <View style={styles.actionsRow}>
+        <TouchableOpacity style={[styles.actionButton, styles.disabledAction]} onPress={handleSell}>
+          <Text style={styles.actionIcon}>💰</Text>
+          <Text style={styles.actionButtonText}>Vendre</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.actionButton, styles.primaryAction]} onPress={() => {
+          if (navigation && typeof navigation.navigate === 'function') {
+            try {
+              navigation.navigate('Scan');
+            } catch (e) {
+              console.log('Navigation to Scan failed:', e);
+            }
+          }
+        }}>
+          <Text style={styles.actionIcon}>📱</Text>
+          <Text style={styles.actionButtonText}>Scan</Text>
+        </TouchableOpacity>
+      </View>
 
         {activeTab === 'defi' && (
           <View style={styles.placeholderContainer}>
