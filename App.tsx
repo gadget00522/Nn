@@ -17,7 +17,7 @@ import WalletConnectModal from './src/components/WalletConnectModal';
 import AuthScreen from './src/screens/AuthScreen';
 
 import useWalletStore from './src/store/walletStore';
-import { observeAuthState, AuthUser } from './src/services/authService';
+import { observeAuthState, AuthUser, handleRedirectResultOnLoad, linkWalletAddressToUser } from './src/services/authService';
 // Import firebaseConfig to ensure Firebase is initialized
 import './src/firebaseConfig';
 
@@ -28,6 +28,7 @@ export default function App() {
   const isWalletUnlocked = useWalletStore((state) => state.isWalletUnlocked);
   const needsBackup = useWalletStore((state) => state.needsBackup);
   const checkStorage = useWalletStore((state) => state.actions.checkStorage);
+  const walletStore = useWalletStore();
 
   // Firebase auth state (only on web)
   const [firebaseUser, setFirebaseUser] = useState<AuthUser | null>(null);
@@ -36,6 +37,53 @@ export default function App() {
   useEffect(() => {
     checkStorage();
   }, [checkStorage]);
+
+  // Handle redirect result on app load (web only)
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      handleRedirectResultOnLoad()
+        .then((user) => {
+          if (user) {
+            // User returned from redirect flow
+            Toast.show({
+              type: 'success',
+              text1: 'Connecté avec Google',
+              text2: `Bienvenue ${user.email}`,
+            });
+
+            // Check if wallet exists and link it
+            const walletAddress = walletStore.address;
+            if (walletStore.isWalletCreated && walletAddress) {
+              linkWalletAddressToUser(user.uid, walletAddress)
+                .then(() => {
+                  Toast.show({
+                    type: 'success',
+                    text1: 'Portefeuille lié',
+                    text2: 'Votre portefeuille a été lié à votre compte Google.',
+                  });
+                })
+                .catch((err) => {
+                  console.error('Error linking wallet after redirect:', err);
+                });
+            } else {
+              Toast.show({
+                type: 'info',
+                text1: 'Aucun portefeuille trouvé',
+                text2: 'Crée ou importe ton portefeuille.',
+              });
+            }
+          }
+        })
+        .catch((err) => {
+          console.error('Error handling redirect result:', err);
+          Toast.show({
+            type: 'error',
+            text1: 'Erreur',
+            text2: 'Impossible de finaliser la connexion Google.',
+          });
+        });
+    }
+  }, []);
 
   // Observe Firebase auth state on web only
   useEffect(() => {

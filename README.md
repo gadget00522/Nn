@@ -78,32 +78,63 @@ const firebaseConfig = {
 - Firebase authentication is bypassed
 - Users go directly to wallet creation/unlock flow
 
-### Google Authentication
+### Connexion Google
 
-**Prerequisites:**
-1. Enable Google as a sign-in provider in Firebase Console:
-   - Go to Firebase Console → Authentication → Sign-in method
-   - Enable Google provider
-   - Add authorized domains (for local testing: `localhost` and your production domain)
-2. Configure OAuth consent screen (Internal consent screen is sufficient for testing)
+**Prérequis:**
+1. Activer Google comme fournisseur de connexion dans la Console Firebase:
+   - Aller dans Console Firebase → Authentication → Sign-in method
+   - Activer le fournisseur Google
+   - Ajouter les domaines autorisés dans les paramètres du projet (pour les tests locaux: `localhost` et votre domaine de production)
+2. Configurer l'écran de consentement OAuth (l'écran de consentement interne est suffisant pour les tests)
 
-**Features:**
-- One-click authentication with Google account
-- Automatic email verification (no verification email needed)
-- Seamless wallet linking: If a wallet exists locally, it's automatically linked to your Google account
-- If no wallet exists, you'll be prompted to create or import one after signing in
+**Fonctionnalités:**
+- Authentification en un clic avec un compte Google
+- Vérification automatique de l'email (aucun email de vérification nécessaire)
+- Liaison transparente du portefeuille: si un portefeuille existe localement, il est automatiquement lié à votre compte Google
+- Si aucun portefeuille n'existe, vous serez invité à en créer ou en importer un après vous être connecté
+- **Flow intelligent**: utilise popup avec fallback automatique vers redirect si la popup est bloquée par le navigateur
+- **Mobile**: le flow redirect est automatiquement utilisé sur mobile quand la popup n'est pas disponible
 
-**Usage:**
-1. Navigate to the authentication screen
-2. Click "🔍 Continuer avec Google"
-3. Select your Google account in the popup
-4. If you have an existing wallet, it will be automatically linked
-5. If not, you'll be prompted to create or import a wallet
+**Utilisation:**
+1. Accéder à l'écran d'authentification
+2. Cliquer sur "Continuer avec Google" (avec le logo G officiel)
+3. Sélectionner votre compte Google dans la popup (ou être redirigé)
+4. Si vous avez un portefeuille existant, il sera automatiquement lié
+5. Sinon, vous serez invité à créer ou importer un portefeuille
 
-**Security:**
-- Only your wallet address (public) is stored in Firebase
-- Your mnemonic/private keys remain encrypted locally
-- Google authentication uses Firebase's secure OAuth 2.0 flow
+**Gestion des erreurs:**
+- Si la popup est fermée par l'utilisateur, un message convivial s'affiche
+- Si la popup est bloquée, le système bascule automatiquement vers le flow de redirection
+- Tous les codes d'erreur Firebase sont traduits en messages français compréhensibles
+
+**Sécurité:**
+- ⚠️ **IMPORTANT**: Seule l'adresse du portefeuille (publique) est stockée dans Firebase
+- ⚠️ **NE JAMAIS** stocker la phrase mnémonique ou les clés privées dans Firestore
+- Vos clés privées/phrase mnémonique restent chiffrées localement
+- L'authentification Google utilise le flow OAuth 2.0 sécurisé de Firebase
+
+**TODO - Mobile natif:**
+- La connexion Google est actuellement disponible uniquement sur le web
+- TODO: implémenter la connexion Google native avec `expo-auth-session` ou `react-native-google-signin` pour iOS/Android
+
+### Cas de test
+
+**Cas A: Utilisateur sans portefeuille local**
+1. Cliquer sur "Continuer avec Google"
+2. Se connecter avec Google
+3. Voir le toast: "Aucun portefeuille trouvé. Crée ou importe ton portefeuille."
+4. Être dirigé vers le flux de création/import de portefeuille
+
+**Cas B: Utilisateur avec portefeuille local**
+1. Cliquer sur "Continuer avec Google"
+2. Se connecter avec Google
+3. Après connexion, vérifier dans Firestore que `users/{uid}` contient `walletAddress` et `updatedAt`
+4. Voir le toast de confirmation de liaison du portefeuille
+
+**Cas C: Popup fermée par l'utilisateur**
+1. Cliquer sur "Continuer avec Google"
+2. Fermer la popup de connexion Google
+3. Voir un message d'erreur convivial: "La fenêtre de connexion a été fermée."
 
 ### Firebase Service Files
 
@@ -111,12 +142,15 @@ const firebaseConfig = {
 - **src/services/authService.ts**: Authentication functions
   - `signupWithEmail(email, password)`: Create new account
   - `loginWithEmail(email, password)`: Sign in to existing account
-  - `loginWithGoogle()`: Sign in with Google (web only)
+  - `loginWithGoogle()`: Sign in with Google (web only) - attempts popup first, falls back to redirect if blocked; returns AuthUser or null if redirect started
+  - `handleRedirectResultOnLoad()`: Check for redirect result on app load (web only)
+  - `mapGoogleAuthError(errorCode)`: Map Firebase error codes to user-friendly French messages
   - `requestPasswordReset(email)`: Send password reset email
   - `observeAuthState(callback)`: Monitor authentication state changes
   - `linkWalletAddressToUser(uid, address)`: Link wallet address to user account
   - `getUserWalletAddress(uid)`: Retrieve wallet address for a user
-- **src/screens/AuthScreen.tsx**: UI for signup/login/password reset/Google sign-in
+- **src/screens/AuthScreen.tsx**: UI for signup/login/password reset with Google sign-in
+- **src/screens/components/GoogleButton.tsx**: Reusable Google sign-in button component with official Google G logo
 
 ### Testing the Complete Flow on Web
 

@@ -8,10 +8,9 @@ import {
   Platform,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
-import { signupWithEmail, loginWithEmail, requestPasswordReset, loginWithGoogle } from '../services/authService';
+import { signupWithEmail, loginWithEmail, requestPasswordReset } from '../services/authService';
 import useWalletStore from '../store/walletStore';
-import { auth } from '../firebaseConfig';
-import { linkWalletAddressToUser } from '../services/authService';
+import GoogleButton from './components/GoogleButton';
 
 type Mode = 'signup' | 'login' | 'reset';
 
@@ -21,10 +20,8 @@ function AuthScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const createWallet = useWalletStore((state) => state.actions.createWallet);
-  const walletStore = useWalletStore();
 
   const handleSignup = async () => {
     if (!email || !password || !confirmPassword) {
@@ -89,69 +86,6 @@ function AuthScreen() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    // Check platform - Google sign-in only supported on web initially
-    if (Platform.OS !== 'web') {
-      Toast.show({ 
-        type: 'info', 
-        text1: 'Non disponible', 
-        text2: 'La connexion Google n\'est pas encore disponible sur cette plateforme.' 
-      });
-      return;
-    }
-
-    setIsGoogleLoading(true);
-    try {
-      const user = await loginWithGoogle();
-      Toast.show({ 
-        type: 'success', 
-        text1: 'Connecté avec Google', 
-        text2: `Bienvenue ${user.email}` 
-      });
-
-      // Check if a wallet exists locally
-      const hasWallet = walletStore.isWalletCreated;
-      const walletAddress = walletStore.address;
-
-      // If wallet exists and has address, link it to the user
-      if (hasWallet && walletAddress) {
-        await linkWalletAddressToUser(user.uid, walletAddress);
-        Toast.show({ 
-          type: 'success', 
-          text1: 'Wallet lié', 
-          text2: 'Votre wallet a été lié à votre compte Google.' 
-        });
-      } else {
-        // No wallet exists - show message to create or import
-        Toast.show({ 
-          type: 'info', 
-          text1: 'Créez votre wallet', 
-          text2: 'Vous devez créer ou importer un wallet pour continuer.' 
-        });
-      }
-    } catch (err: any) {
-      console.error('Google sign-in error:', err);
-      let errorMessage = 'Impossible de se connecter avec Google.';
-      
-      // Handle common errors
-      if (err?.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'La fenêtre de connexion a été fermée.';
-      } else if (err?.code === 'auth/popup-blocked') {
-        errorMessage = 'La fenêtre popup a été bloquée par le navigateur.';
-      } else if (err?.code === 'auth/cancelled-popup-request') {
-        errorMessage = 'Demande de connexion annulée.';
-      }
-      
-      Toast.show({ 
-        type: 'error', 
-        text1: 'Erreur Google', 
-        text2: errorMessage 
-      });
-    } finally {
-      setIsGoogleLoading(false);
-    }
-  };
-
   const renderForm = () => {
     if (mode === 'signup') {
       return (
@@ -172,17 +106,7 @@ function AuthScreen() {
             <View style={styles.divider} />
           </View>
 
-          {Platform.OS === 'web' && (
-            <TouchableOpacity 
-              style={[styles.googleButton, isGoogleLoading && styles.buttonDisabled]} 
-              onPress={handleGoogleSignIn} 
-              disabled={isGoogleLoading}
-            >
-              <Text style={styles.googleButtonText}>
-                {isGoogleLoading ? 'Connexion...' : '🔍 Continuer avec Google'}
-              </Text>
-            </TouchableOpacity>
-          )}
+          {Platform.OS === 'web' && <GoogleButton />}
         </View>
       );
     }
@@ -203,17 +127,7 @@ function AuthScreen() {
             <View style={styles.divider} />
           </View>
 
-          {Platform.OS === 'web' && (
-            <TouchableOpacity 
-              style={[styles.googleButton, isGoogleLoading && styles.buttonDisabled]} 
-              onPress={handleGoogleSignIn} 
-              disabled={isGoogleLoading}
-            >
-              <Text style={styles.googleButtonText}>
-                {isGoogleLoading ? 'Connexion...' : '🔍 Continuer avec Google'}
-              </Text>
-            </TouchableOpacity>
-          )}
+          {Platform.OS === 'web' && <GoogleButton />}
         </View>
       );
     }
@@ -261,8 +175,6 @@ const styles = StyleSheet.create({
   dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
   divider: { flex: 1, height: 1, backgroundColor: '#3C4043' },
   dividerText: { color: '#8B92A6', fontSize: 13, marginHorizontal: 12, fontWeight: '500' },
-  googleButton: { backgroundColor: '#FFFFFF', paddingVertical: 14, borderRadius: 999, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: '#3C4043' },
-  googleButtonText: { color: '#24272A', fontSize: 15, fontWeight: '600' },
 });
 
 export default AuthScreen;
