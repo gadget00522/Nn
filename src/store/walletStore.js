@@ -5,8 +5,8 @@ import { Alchemy } from 'alchemy-sdk';
 import { Platform } from 'react-native';
 
 // DEMO ONLY - NOT SECURE FOR PRODUCTION
-// This is a simple password-based storage for web demo purposes
-// In production, use proper secure storage and encryption
+// Simple password-based storage for web demo purposes.
+// In production, use proper secure storage and encryption.
 const webStorage = {
   getItem: (key) => {
     if (typeof localStorage !== 'undefined') {
@@ -23,30 +23,30 @@ const webStorage = {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(key);
     }
-  }
+  },
 };
 
 const SUPPORTED_NETWORKS = [
-  { 
-    name: 'Ethereum Sepolia', 
+  {
+    name: 'Ethereum Sepolia',
     symbol: 'ETH',
     rpcUrl: 'https://eth-sepolia.g.alchemy.com/v2/6E1MABBp0KS-gBCc5zXk7',
     chainId: 11155111,
     explorerUrl: 'https://sepolia.etherscan.io',
-    alchemyNetwork: 'eth-sepolia', // Nom pour Alchemy SDK
+    alchemyNetwork: 'eth-sepolia',
   },
-  { 
-    name: 'Polygon Mumbai', 
+  {
+    name: 'Polygon Mumbai',
     symbol: 'MATIC',
     rpcUrl: 'https://polygon-mumbai.g.alchemy.com/v2/6E1MABBp0KS-gBCc5zXk7',
     chainId: 80001,
     explorerUrl: 'https://mumbai.polygonscan.com',
-    alchemyNetwork: 'polygon-mumbai', // Nom pour Alchemy SDK
+    alchemyNetwork: 'polygon-mumbai',
   },
 ];
 
 const useWalletStore = create((set, get) => ({
-  // État initial du store
+  // État initial
   mnemonic: null,
   address: null,
   isWalletCreated: false,
@@ -67,31 +67,32 @@ const useWalletStore = create((set, get) => ({
     checkStorage: async () => {
       try {
         if (Platform.OS === 'web') {
-          // Pour le web, vérifier localStorage
-          const webWallet = webStorage.getItem('wallet_mnemonic');
-          set({ isWalletCreated: !!webWallet });
-        } else {
-          const credentials = await Keychain.getGenericPassword();
-          set({ isWalletCreated: !!credentials });
-        const credentials = await Keychain.getGenericPassword();
-        const walletExists = !!credentials;
-        set({ isWalletCreated: walletExists });
-        
-        // On web, auto-unlock if wallet exists and not in backup mode
-        if (Platform.OS === 'web' && walletExists && credentials) {
-          const wallet = ethers.Wallet.fromPhrase(credentials.password);
-          const state = get();
-          
-          // Only auto-unlock if backup is already completed
-          if (!state.needsBackup) {
-            set({
-              mnemonic: credentials.password,
-              address: wallet.address,
-              isWalletUnlocked: true,
-            });
+          // Web : vérifier localStorage (demo)
+          const webMnemonic = webStorage.getItem('wallet_mnemonic');
+          const webPassword = webStorage.getItem('wallet_password');
+          const walletExists = !!webMnemonic && !!webPassword;
+          set({ isWalletCreated: walletExists });
+
+          // Si le wallet existe déjà et qu'on n'est pas en mode backup, on peut auto-déverrouiller
+          if (walletExists) {
+            const wallet = ethers.Wallet.fromPhrase(webMnemonic);
+            const state = get();
+            if (!state.needsBackup) {
+              set({
+                mnemonic: webMnemonic,
+                address: wallet.address,
+                isWalletUnlocked: true,
+              });
+            }
           }
+        } else {
+          // Native : Keychain
+          const credentials = await Keychain.getGenericPassword();
+          const walletExists = !!credentials;
+          set({ isWalletCreated: walletExists });
         }
       } catch (error) {
+        console.log('checkStorage error:', error);
         set({ isWalletCreated: false });
       }
     },
@@ -100,15 +101,14 @@ const useWalletStore = create((set, get) => ({
     createWallet: async (password = null) => {
       const wallet = ethers.Wallet.createRandom();
       const phrase = wallet.mnemonic.phrase;
-      
+
       if (Platform.OS === 'web') {
         // DEMO ONLY - NOT SECURE
-        // Pour le web, stocker dans localStorage avec un mot de passe simple
         const demoPassword = password || 'demo1234';
         webStorage.setItem('wallet_mnemonic', phrase);
         webStorage.setItem('wallet_password', demoPassword);
       } else {
-        await Keychain.setGenericPassword("wallet", phrase, {
+        await Keychain.setGenericPassword('wallet', phrase, {
           accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
         });
       }
@@ -133,73 +133,51 @@ const useWalletStore = create((set, get) => ({
       });
     },
 
-    // Déverrouille le portefeuille avec authentification biométrique ou mot de passe
+    // Déverrouille le portefeuille avec mot de passe (web) ou biométrie (native)
     unlockWallet: async (password = null) => {
       try {
         if (Platform.OS === 'web') {
           // DEMO ONLY - NOT SECURE
-          // Pour le web, vérifier le mot de passe
           const storedPassword = webStorage.getItem('wallet_password');
           const storedMnemonic = webStorage.getItem('wallet_mnemonic');
-          
-          if (!storedMnemonic) {
+
+          if (!storedMnemonic || !storedPassword) {
             throw new Error('Aucun portefeuille trouvé');
           }
-          
+
           if (password && password !== storedPassword) {
             throw new Error('Mot de passe incorrect');
           }
-          
-          const wallet = ethers.Wallet.fromPhrase(storedMnemonic);
-        // On web, check if wallet exists in localStorage and auto-unlock
-        if (Platform.OS === 'web') {
-          const credentials = await Keychain.getGenericPassword();
-          if (credentials) {
-            const wallet = ethers.Wallet.fromPhrase(credentials.password);
-            set({
-              mnemonic: credentials.password,
-              address: wallet.address,
-              isWalletUnlocked: true,
-            });
-            return;
-          }
-        }
-        
-        // On native platforms, use biometric authentication
-        const credentials = await Keychain.getGenericPassword({
-          authenticationPrompt: {
-            title: "Déverrouiller le portefeuille",
-          },
-        });
 
-        if (credentials) {
-          const wallet = ethers.Wallet.fromPhrase(credentials.password);
+          const wallet = ethers.Wallet.fromPhrase(storedMnemonic);
           set({
             mnemonic: storedMnemonic,
             address: wallet.address,
             isWalletUnlocked: true,
           });
           return true;
-        } else {
-          const credentials = await Keychain.getGenericPassword({
-            authenticationPrompt: {
-              title: "Déverrouiller le portefeuille",
-            },
-          });
-
-          if (credentials) {
-            const wallet = ethers.Wallet.fromPhrase(credentials.password);
-            set({
-              mnemonic: credentials.password,
-              address: wallet.address,
-              isWalletUnlocked: true,
-            });
-            return true;
-          }
         }
+
+        // Native : biométrie via Keychain
+        const credentials = await Keychain.getGenericPassword({
+          authenticationPrompt: {
+            title: 'Déverrouiller le portefeuille',
+          },
+        });
+
+        if (!credentials) {
+          throw new Error('Échec de l’authentification ou annulée');
+        }
+
+        const wallet = ethers.Wallet.fromPhrase(credentials.password);
+        set({
+          mnemonic: credentials.password,
+          address: wallet.address,
+          isWalletUnlocked: true,
+        });
+        return true;
       } catch (error) {
-        // L'utilisateur a annulé ou l'authentification a échoué
-        console.log("Unlock cancelled or failed:", error);
+        console.log('Unlock cancelled or failed:', error);
         throw error;
       }
     },
@@ -216,18 +194,25 @@ const useWalletStore = create((set, get) => ({
 
     // Efface complètement le portefeuille
     wipeWallet: async () => {
-      if (Platform.OS === 'web') {
-        webStorage.removeItem('wallet_mnemonic');
-        webStorage.removeItem('wallet_password');
-      } else {
-        await Keychain.resetGenericPassword();
+      try {
+        if (Platform.OS === 'web') {
+          webStorage.removeItem('wallet_mnemonic');
+          webStorage.removeItem('wallet_password');
+        } else {
+          await Keychain.resetGenericPassword();
+        }
+      } catch (e) {
+        console.log('wipeWallet error:', e);
       }
+
       set({
         mnemonic: null,
         address: null,
         isWalletCreated: false,
         isWalletUnlocked: false,
         balance: '0',
+        transactions: [],
+        tokenBalances: [],
       });
     },
 
@@ -235,87 +220,83 @@ const useWalletStore = create((set, get) => ({
     fetchData: async () => {
       try {
         const { address, currentNetwork } = get();
-        
+
         if (!address) {
           return;
         }
-        
-        // Configure le client Alchemy
+
         const settings = {
-          apiKey: "6E1MABBp0KS-gBCc5zXk7",
+          apiKey: '6E1MABBp0KS-gBCc5zXk7',
           network: currentNetwork.alchemyNetwork,
         };
         const alchemy = new Alchemy(settings);
-        
-        // Récupère le solde
+
+        // Solde ETH
         const balanceWei = await alchemy.core.getBalance(address);
         const balanceEth = ethers.utils.formatEther(balanceWei);
-        
-        // --- Récupérer les soldes des tokens ---
+
+        // Soldes tokens
         const tokenBalancesResponse = await alchemy.core.getTokenBalances(address);
 
-        // Filtrer les tokens sans solde ou sans métadonnées pour éviter le spam
-        const tokensWithBalance = tokenBalancesResponse.tokenBalances.filter(token =>
-          token.tokenBalance !== "0" && token.tokenBalance !== null
+        const tokensWithBalance = tokenBalancesResponse.tokenBalances.filter(
+          (token) => token.tokenBalance !== '0' && token.tokenBalance !== null,
         );
 
-        // Récupérer les métadonnées pour chaque token
-        const tokenMetadataPromises = tokensWithBalance.map(token =>
-          alchemy.core.getTokenMetadata(token.contractAddress)
+        const tokenMetadataPromises = tokensWithBalance.map((token) =>
+          alchemy.core.getTokenMetadata(token.contractAddress),
         );
         const tokenMetadataList = await Promise.all(tokenMetadataPromises);
 
-        // Formater les données pour un affichage propre
-        const finalTokenList = tokensWithBalance.map((token, index) => {
-          const metadata = tokenMetadataList[index];
-          if (!metadata.symbol) return null;
-          
-          // Le solde est en hexadécimal, il faut le convertir
-          const balance = (parseInt(token.tokenBalance, 16) / Math.pow(10, metadata.decimals)).toFixed(4);
-          return {
-            symbol: metadata.symbol,
-            balance: balance,
-            contractAddress: token.contractAddress,
-            decimals: metadata.decimals,
-            logo: metadata.logo,
-          };
-        }).filter(token => token !== null);
-        
-        // Récupère les transactions envoyées
+        const finalTokenList = tokensWithBalance
+          .map((token, index) => {
+            const metadata = tokenMetadataList[index];
+            if (!metadata.symbol) return null;
+
+            const balance =
+              parseInt(token.tokenBalance, 16) / Math.pow(10, metadata.decimals);
+            return {
+              symbol: metadata.symbol,
+              balance: balance.toFixed(4),
+              contractAddress: token.contractAddress,
+              decimals: metadata.decimals,
+              logo: metadata.logo,
+            };
+          })
+          .filter((token) => token !== null);
+
+        // Transactions envoyées
         const sentTransfers = await alchemy.core.getAssetTransfers({
-          fromBlock: "0x0",
-          toBlock: "latest",
+          fromBlock: '0x0',
+          toBlock: 'latest',
           fromAddress: address,
-          category: ["external"],
-          order: "desc",
+          category: ['external'],
+          order: 'desc',
           withMetadata: true,
           maxCount: 20,
         });
-        
-        // Récupère les transactions reçues
+
+        // Transactions reçues
         const receivedTransfers = await alchemy.core.getAssetTransfers({
-          fromBlock: "0x0",
-          toBlock: "latest",
+          fromBlock: '0x0',
+          toBlock: 'latest',
           toAddress: address,
-          category: ["external"],
-          order: "desc",
+          category: ['external'],
+          order: 'desc',
           withMetadata: true,
           maxCount: 20,
         });
-        
-        // Combine et trie les transactions par date
+
         const allTransfers = [...sentTransfers.transfers, ...receivedTransfers.transfers];
         allTransfers.sort((a, b) => {
           const dateA = new Date(a.metadata.blockTimestamp);
           const dateB = new Date(b.metadata.blockTimestamp);
           return dateB - dateA;
         });
-        
-        // Mettre à jour l'état avec TOUTES les nouvelles données
-        set({ 
-          balance: balanceEth, 
+
+        set({
+          balance: balanceEth,
           transactions: allTransfers.slice(0, 40),
-          tokenBalances: finalTokenList 
+          tokenBalances: finalTokenList,
         });
       } catch (error) {
         console.log('Failed to fetch data:', error);
@@ -325,87 +306,73 @@ const useWalletStore = create((set, get) => ({
 
     // Change l'écran actuel
     setScreen: (screenName, asset = null) => {
-      set({ 
+      set({
         currentScreen: screenName,
-        assetToSend: asset 
+        assetToSend: asset,
       });
     },
 
     // Change le réseau actif
     switchNetwork: (network) => {
-      set({ 
+      set({
         currentNetwork: network,
-        // Réinitialiser les données lors du changement de réseau
-        balance: '0', 
-        tokenBalances: [], 
-        transactions: [] 
+        balance: '0',
+        tokenBalances: [],
+        transactions: [],
       });
     },
 
     // Envoie une transaction ETH ou ERC-20
     sendTransaction: async (toAddress, amount) => {
       set({ isSending: true, sendError: null });
-      
+
       try {
         const { mnemonic, assetToSend, currentNetwork } = get();
-        
+
         if (!mnemonic) {
-          throw new Error('Mnémonique non disponible. Veuillez déverrouiller le portefeuille.');
+          throw new Error(
+            'Mnémonique non disponible. Veuillez déverrouiller le portefeuille.',
+          );
         }
-        
-        // Créer le provider pour le réseau actif
+
         const provider = new ethers.providers.JsonRpcProvider(currentNetwork.rpcUrl);
-        
-        // Recréer le portefeuille à partir de la mnémonique
         const wallet = ethers.Wallet.fromPhrase(mnemonic);
-        
-        // Connecter le portefeuille au provider
         const connectedWallet = wallet.connect(provider);
-        
-        // Valider l'adresse du destinataire
+
         if (!ethers.utils.isAddress(toAddress)) {
-          throw new Error('Adresse du destinataire invalide.');
+          throw new Error("Adresse du destinataire invalide.");
         }
-        
+
         if (assetToSend && assetToSend.contractAddress) {
-          // CAS 1 : C'est un TOKEN ERC-20
-          
-          // Définir l'interface minimale du contrat pour un transfert
-          const tokenAbi = ["function transfer(address to, uint256 amount)"];
-          const tokenContract = new ethers.Contract(assetToSend.contractAddress, tokenAbi, connectedWallet);
-          
-          // Convertir le montant en utilisant les décimales du token
+          // Token ERC-20
+          const tokenAbi = ['function transfer(address to, uint256 amount)'];
+          const tokenContract = new ethers.Contract(
+            assetToSend.contractAddress,
+            tokenAbi,
+            connectedWallet,
+          );
+
           const amountToSend = ethers.utils.parseUnits(amount, assetToSend.decimals);
-          
-          // Appeler la fonction `transfer` du contrat
           const tx = await tokenContract.transfer(toAddress, amountToSend);
           await tx.wait();
-
         } else {
-          // CAS 2 : C'est de l'ETH (logique existante)
-          // Convertir le montant en wei
+          // ETH
           const txValue = ethers.utils.parseEther(amount);
-          
-          // Construire l'objet de transaction
           const tx = {
             to: toAddress,
             value: txValue,
           };
-          
-          // Envoyer la transaction
           const txResponse = await connectedWallet.sendTransaction(tx);
-          
-          // Attendre la confirmation
           await txResponse.wait();
         }
-        
-        // Rafraîchir le solde et les transactions
+
+        // Rafraîchir données
         await get().actions.fetchData();
-        
-        // Retourner au tableau de bord
+
+        // Retour dashboard
         get().actions.setScreen('dashboard');
-        
       } catch (error) {
+        console.log('sendTransaction error:', error);
         set({ sendError: error.message });
       } finally {
         set({ isSending: false });
