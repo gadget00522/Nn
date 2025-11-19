@@ -25,13 +25,31 @@ jobs:
         with:
           node-version: "18"
 
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json','**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - name: Install Dependencies
         run: npm install --legacy-peer-deps
 
       - name: Build Web App
         run: npm run build
 
-      # On dit à GitHub Pages de prendre dist/ comme site à publier
+      - name: Verify dist exists
+        run: |
+          if [ ! -d dist ]; then
+            echo "Le dossier dist/ est introuvable. Vérifie la configuration output de webpack."
+            exit 1
+          fi
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v4
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
