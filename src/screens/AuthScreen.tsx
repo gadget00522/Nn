@@ -8,7 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
-import { signupWithEmail, loginWithEmail, requestPasswordReset } from '../services/authService';
+import { signupWithEmail, loginWithEmail, requestPasswordReset, loginWithGoogle, linkWalletAddressToUser } from '../services/authService';
 import useWalletStore from '../store/walletStore';
 
 type Mode = 'signup' | 'login' | 'reset';
@@ -19,8 +19,10 @@ function AuthScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const createWallet = useWalletStore((state) => state.actions.createWallet);
+  const address = useWalletStore((state) => state.address);
 
   const handleSignup = async () => {
     if (!email || !password || !confirmPassword) {
@@ -85,6 +87,52 @@ function AuthScreen() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    // Only available on web
+    if (Platform.OS !== 'web') {
+      Toast.show({ 
+        type: 'info', 
+        text1: 'Non disponible', 
+        text2: 'Google Sign-In est disponible uniquement sur Web pour le moment.' 
+      });
+      return;
+    }
+
+    setIsGoogleLoading(true);
+    try {
+      const user = await loginWithGoogle();
+      console.log('Google login successful:', user.uid);
+
+      // If user has a wallet address locally, link it to Firebase
+      if (address) {
+        console.log('Linking existing wallet address to user:', address);
+        await linkWalletAddressToUser(user.uid, address);
+        Toast.show({ 
+          type: 'success', 
+          text1: 'Connecté avec Google', 
+          text2: `Bienvenue ${user.email}. Ton portefeuille a été lié.` 
+        });
+      } else {
+        // No wallet found - guide user to create or import
+        Toast.show({ 
+          type: 'info', 
+          text1: 'Connecté avec Google', 
+          text2: 'Aucun portefeuille trouvé. Crée ou importe ton portefeuille.' 
+        });
+      }
+      // Navigation is handled by App.tsx via observeAuthState
+    } catch (err: any) {
+      console.error('Google login error:', err);
+      Toast.show({ 
+        type: 'error', 
+        text1: 'Erreur Google Sign-In', 
+        text2: err?.message || 'Impossible de se connecter avec Google.' 
+      });
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
   const renderForm = () => {
     if (mode === 'signup') {
       return (
@@ -135,6 +183,26 @@ function AuthScreen() {
         <TouchableOpacity style={[styles.modeTab, mode === 'reset' && styles.modeTabActive]} onPress={() => setMode('reset')}><Text style={[styles.modeTabText, mode === 'reset' && styles.modeTabTextActive]}>Mot de passe oublié</Text></TouchableOpacity>
       </View>
       {renderForm()}
+      {mode !== 'reset' && Platform.OS === 'web' && (
+        <View style={styles.googleContainer}>
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OU</Text>
+            <View style={styles.dividerLine} />
+          </View>
+          <TouchableOpacity 
+            style={[styles.googleButton, isGoogleLoading && styles.buttonDisabled]} 
+            onPress={handleGoogleLogin} 
+            disabled={isGoogleLoading}
+            accessibilityLabel="Continuer avec Google"
+          >
+            <Text style={styles.googleIcon}>G</Text>
+            <Text style={styles.googleButtonText}>
+              {isGoogleLoading ? 'Connexion...' : 'Continuer avec Google'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -155,6 +223,31 @@ const styles = StyleSheet.create({
   button: { backgroundColor: '#037DD6', paddingVertical: 14, borderRadius: 999, alignItems: 'center', marginBottom: 10 },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
+  googleContainer: { marginTop: 20 },
+  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#3C4043' },
+  dividerText: { color: '#8B92A6', fontSize: 12, fontWeight: '600', marginHorizontal: 12 },
+  googleButton: { 
+    backgroundColor: '#FFFFFF', 
+    paddingVertical: 14, 
+    borderRadius: 999, 
+    alignItems: 'center', 
+    flexDirection: 'row',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#3C4043',
+  },
+  googleIcon: { 
+    fontSize: 18, 
+    fontWeight: 'bold',
+    color: '#4285F4',
+    marginRight: 8,
+  },
+  googleButtonText: { 
+    color: '#24272A', 
+    fontSize: 15, 
+    fontWeight: '600',
+  },
 });
 
 export default AuthScreen;

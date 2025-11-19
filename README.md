@@ -82,9 +82,50 @@ const firebaseConfig = {
 - **src/services/authService.ts**: Authentication functions
   - `signupWithEmail(email, password)`: Create new account
   - `loginWithEmail(email, password)`: Sign in to existing account
+  - `loginWithGoogle()`: Sign in with Google (Web only)
   - `requestPasswordReset(email)`: Send password reset email
   - `observeAuthState(callback)`: Monitor authentication state changes
+  - `linkWalletAddressToUser(uid, address)`: Link wallet address to user account
 - **src/screens/AuthScreen.tsx**: UI for signup/login/password reset
+
+### Connexion Google
+
+L'application supporte maintenant la connexion via Google en complément de l'authentification email/mot de passe.
+
+**Configuration Firebase Console:**
+1. Accédez à votre [Firebase Console](https://console.firebase.google.com/)
+2. Sélectionnez votre projet
+3. Allez dans **Authentication** > **Sign-in method**
+4. Activez le provider **Google**
+5. Configurez l'email support du projet si nécessaire
+
+**Fonctionnalités:**
+- Connexion rapide avec un compte Google existant
+- Pas besoin de créer un nouveau mot de passe
+- Email automatiquement vérifié (Google vérifie les emails)
+- Lien automatique avec le portefeuille local si existant
+
+**Flow de connexion:**
+1. L'utilisateur clique sur "Continuer avec Google"
+2. Une popup Google s'ouvre pour la sélection de compte
+3. Après authentification:
+   - Si un portefeuille existe localement, il est automatiquement lié au compte Firebase
+   - Sinon, l'utilisateur est invité à créer ou importer un portefeuille
+
+**Limitations actuelles:**
+- ⚠️ **Support Web uniquement** - La connexion Google n'est actuellement disponible que sur la version web
+- Pour mobile (React Native), l'implémentation nécessite `expo-auth-session` ou `react-native-google-signin` (TODO futur)
+
+**Sécurité:**
+- ✅ Seule l'adresse du portefeuille (publique) est stockée dans Firestore
+- ✅ La phrase mnémonique (recovery phrase) n'est JAMAIS envoyée à Firebase ou un serveur
+- ✅ Les clés privées restent uniquement sur l'appareil de l'utilisateur
+- ✅ Stockage local chiffré (localStorage sur web demo, Keychain/SecureStore sur mobile)
+
+**Gestion des erreurs:**
+- Si la popup est fermée avant la connexion: "Fenêtre fermée avant la connexion."
+- Si l'utilisateur annule: "Action annulée, réessaie."
+- Les erreurs Firebase sont loguées pour le débogage
 
 ### Testing the Complete Flow on Web
 
