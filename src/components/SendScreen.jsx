@@ -90,13 +90,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#24272A',
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 30,
-    color: '#333',
+    color: '#FFFFFF',
     textAlign: 'center',
   },
   formContainer: {
@@ -104,52 +104,56 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    color: '#333',
+    color: '#D6D9DC',
     marginBottom: 8,
     fontWeight: '600',
   },
   input: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#141618',
     borderRadius: 10,
     padding: 15,
     fontSize: 16,
+    color: '#FFFFFF',
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#3C4043',
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#037DD6',
     paddingVertical: 15,
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 15,
   },
   buttonDisabled: {
-    backgroundColor: '#B0B0B0',
+    backgroundColor: '#4A5568',
+    opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
   },
   secondaryButton: {
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#007AFF',
+    borderColor: '#037DD6',
   },
   secondaryButtonText: {
-    color: '#007AFF',
+    color: '#037DD6',
     fontSize: 18,
     fontWeight: '600',
   },
   errorContainer: {
-    backgroundColor: '#FFE5E5',
+    backgroundColor: '#5C2A2A',
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#D32F2F',
   },
   errorText: {
-    color: '#D32F2F',
+    color: '#FF6B6B',
     fontSize: 14,
   },
   loadingContainer: {
@@ -159,7 +163,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 15,
     fontSize: 16,
-    color: '#666',
+    color: '#8B92A6',
   },
 });
 

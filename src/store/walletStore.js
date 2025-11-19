@@ -4,6 +4,28 @@ import * as Keychain from 'react-native-keychain';
 import { Alchemy } from 'alchemy-sdk';
 import { Platform } from 'react-native';
 
+// DEMO ONLY - NOT SECURE FOR PRODUCTION
+// This is a simple password-based storage for web demo purposes
+// In production, use proper secure storage and encryption
+const webStorage = {
+  getItem: (key) => {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem(key);
+    }
+    return null;
+  },
+  setItem: (key, value) => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, value);
+    }
+  },
+  removeItem: (key) => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(key);
+    }
+  }
+};
+
 const SUPPORTED_NETWORKS = [
   { 
     name: 'Ethereum Sepolia', 
@@ -44,6 +66,13 @@ const useWalletStore = create((set, get) => ({
     // Vérifie si un portefeuille existe dans le stockage
     checkStorage: async () => {
       try {
+        if (Platform.OS === 'web') {
+          // Pour le web, vérifier localStorage
+          const webWallet = webStorage.getItem('wallet_mnemonic');
+          set({ isWalletCreated: !!webWallet });
+        } else {
+          const credentials = await Keychain.getGenericPassword();
+          set({ isWalletCreated: !!credentials });
         const credentials = await Keychain.getGenericPassword();
         const walletExists = !!credentials;
         set({ isWalletCreated: walletExists });
@@ -68,13 +97,21 @@ const useWalletStore = create((set, get) => ({
     },
 
     // Crée un nouveau portefeuille
-    createWallet: async () => {
+    createWallet: async (password = null) => {
       const wallet = ethers.Wallet.createRandom();
       const phrase = wallet.mnemonic.phrase;
       
-      await Keychain.setGenericPassword("wallet", phrase, {
-        accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
-      });
+      if (Platform.OS === 'web') {
+        // DEMO ONLY - NOT SECURE
+        // Pour le web, stocker dans localStorage avec un mot de passe simple
+        const demoPassword = password || 'demo1234';
+        webStorage.setItem('wallet_mnemonic', phrase);
+        webStorage.setItem('wallet_password', demoPassword);
+      } else {
+        await Keychain.setGenericPassword("wallet", phrase, {
+          accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
+        });
+      }
 
       set({
         mnemonic: phrase,
@@ -96,9 +133,24 @@ const useWalletStore = create((set, get) => ({
       });
     },
 
-    // Déverrouille le portefeuille avec authentification biométrique
-    unlockWallet: async () => {
+    // Déverrouille le portefeuille avec authentification biométrique ou mot de passe
+    unlockWallet: async (password = null) => {
       try {
+        if (Platform.OS === 'web') {
+          // DEMO ONLY - NOT SECURE
+          // Pour le web, vérifier le mot de passe
+          const storedPassword = webStorage.getItem('wallet_password');
+          const storedMnemonic = webStorage.getItem('wallet_mnemonic');
+          
+          if (!storedMnemonic) {
+            throw new Error('Aucun portefeuille trouvé');
+          }
+          
+          if (password && password !== storedPassword) {
+            throw new Error('Mot de passe incorrect');
+          }
+          
+          const wallet = ethers.Wallet.fromPhrase(storedMnemonic);
         // On web, check if wallet exists in localStorage and auto-unlock
         if (Platform.OS === 'web') {
           const credentials = await Keychain.getGenericPassword();
@@ -123,14 +175,32 @@ const useWalletStore = create((set, get) => ({
         if (credentials) {
           const wallet = ethers.Wallet.fromPhrase(credentials.password);
           set({
-            mnemonic: credentials.password,
+            mnemonic: storedMnemonic,
             address: wallet.address,
             isWalletUnlocked: true,
           });
+          return true;
+        } else {
+          const credentials = await Keychain.getGenericPassword({
+            authenticationPrompt: {
+              title: "Déverrouiller le portefeuille",
+            },
+          });
+
+          if (credentials) {
+            const wallet = ethers.Wallet.fromPhrase(credentials.password);
+            set({
+              mnemonic: credentials.password,
+              address: wallet.address,
+              isWalletUnlocked: true,
+            });
+            return true;
+          }
         }
       } catch (error) {
         // L'utilisateur a annulé ou l'authentification a échoué
         console.log("Unlock cancelled or failed:", error);
+        throw error;
       }
     },
 
@@ -146,7 +216,12 @@ const useWalletStore = create((set, get) => ({
 
     // Efface complètement le portefeuille
     wipeWallet: async () => {
-      await Keychain.resetGenericPassword();
+      if (Platform.OS === 'web') {
+        webStorage.removeItem('wallet_mnemonic');
+        webStorage.removeItem('wallet_password');
+      } else {
+        await Keychain.resetGenericPassword();
+      }
       set({
         mnemonic: null,
         address: null,
