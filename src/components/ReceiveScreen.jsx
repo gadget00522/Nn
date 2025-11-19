@@ -1,8 +1,20 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import Toast from 'react-native-toast-message';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import useWalletStore from '../store/walletStore';
 import { useNavigation } from '@react-navigation/native';
+
+// Dynamically import QRCode only on native platforms
+let QRCode = null;
+if (Platform.OS !== 'web') {
+  try {
+    QRCode = require('react-native-qrcode-svg').default;
+  } catch (e) {
+    console.log('QRCode library not available');
+  }
+}
 
 function ReceiveScreen() {
   const navigation = useNavigation();
@@ -28,6 +40,51 @@ function ReceiveScreen() {
         text1: 'Adresse copiée',
         text2: 'L\'adresse a été copiée',
       });
+  const setScreen = useWalletStore((state) => state.actions.setScreen);
+  
+  // Use React Navigation when available (web/App.tsx)
+  let navigation = null;
+  try {
+    navigation = useNavigation();
+  } catch (e) {
+    // Navigation not available (App.jsx), will use store-based navigation
+  }
+
+  const handleBack = () => {
+    // For store-based navigation (App.jsx)
+    setScreen('dashboard');
+    
+    // For React Navigation (App.tsx / web)
+    if (navigation && typeof navigation.goBack === 'function') {
+      try {
+        navigation.goBack();
+      } catch (e) {
+        console.log('Navigation goBack failed:', e);
+      }
+    }
+  };
+
+  const handleCopyAddress = async () => {
+    try {
+      // Try web clipboard API first
+      if (Platform.OS === 'web' && navigator.clipboard) {
+        await navigator.clipboard.writeText(address);
+        setCopiedMessage(true);
+        setTimeout(() => {
+          setCopiedMessage(false);
+        }, 2000);
+      } else {
+        // Fallback to React Native Clipboard
+        const { default: Clipboard } = await import('react-native').then(rn => ({ default: rn.Clipboard }));
+        Clipboard.setString(address);
+        setCopiedMessage(true);
+        setTimeout(() => {
+          setCopiedMessage(false);
+        }, 2000);
+      }
+    } catch (error) {
+      console.log('Failed to copy address:', error);
+      Alert.alert('Erreur', 'Impossible de copier l\'adresse');
     }
   };
 
@@ -62,6 +119,25 @@ function ReceiveScreen() {
             </Text>
           </View>
         </View>
+      {QRCode ? (
+        <View style={styles.qrContainer}>
+          <QRCode value={address} size={250} />
+        </View>
+      ) : (
+        <View style={styles.qrContainer}>
+          <Text style={styles.qrPlaceholder}>
+            📱 Le QR code est disponible uniquement sur l'application mobile.
+          </Text>
+          <Text style={styles.qrSubtext}>
+            Utilisez le bouton "Copier l'adresse" ci-dessous pour partager votre adresse.
+          </Text>
+        </View>
+      )}
+
+      <View style={styles.addressContainer}>
+        <Text style={styles.label}>Votre adresse :</Text>
+        <Text style={styles.address} selectable={true}>{address}</Text>
+      </View>
 
         <TouchableOpacity 
           style={styles.copyButton} 
@@ -74,6 +150,9 @@ function ReceiveScreen() {
           <Text style={styles.warningText}>
             Envoyez uniquement des actifs {currentNetwork.symbol} et des tokens sur le réseau {currentNetwork.name}. L'envoi d'autres actifs peut entraîner une perte permanente.
           </Text>
+      {copiedMessage && (
+        <View style={styles.messageContainer}>
+          <Text style={styles.messageText}>✓ Adresse copiée !</Text>
         </View>
       </View>
     </View>
@@ -149,6 +228,23 @@ const styles = StyleSheet.create({
   qrSubtext: {
     fontSize: 14,
     color: '#666',
+    marginVertical: 30,
+    padding: 20,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 10,
+    minHeight: 290,
+  },
+  qrPlaceholder: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  qrSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   addressContainer: {
     marginBottom: 20,

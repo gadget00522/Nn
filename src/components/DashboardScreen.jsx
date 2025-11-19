@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView, Modal } from 'react-native';
 import Toast from 'react-native-toast-message';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, Linking, Modal, Platform } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import useWalletStore, { SUPPORTED_NETWORKS } from '../store/walletStore';
 import { useNavigation } from '@react-navigation/native';
 
@@ -16,6 +18,14 @@ function DashboardScreen() {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('tokens');
+  
+  // Use React Navigation when available (web/App.tsx)
+  let navigation = null;
+  try {
+    navigation = useNavigation();
+  } catch (e) {
+    // Navigation not available (App.jsx), will use store-based navigation
+  }
 
   useEffect(() => {
     if (address) {
@@ -64,6 +74,60 @@ function DashboardScreen() {
         text2: 'L\'adresse a été copiée dans le presse-papiers',
       });
     }
+  };
+
+  const handleReceive = () => {
+    // For store-based navigation (App.jsx)
+    setScreen('receive');
+    
+    // For React Navigation (App.tsx / web)
+    if (navigation && typeof navigation.navigate === 'function') {
+      try {
+        navigation.navigate('Receive');
+      } catch (e) {
+        console.log('Navigation to Receive failed:', e);
+      }
+    }
+  };
+
+  const handleSend = (asset) => {
+    // For store-based navigation (App.jsx)
+    setScreen('send', asset);
+    
+    // For React Navigation (App.tsx / web)
+    if (navigation && typeof navigation.navigate === 'function') {
+      try {
+        navigation.navigate('Send');
+      } catch (e) {
+        console.log('Navigation to Send failed:', e);
+      }
+    }
+  };
+
+  const handleCopyAddress = async () => {
+    try {
+      // Try web clipboard API first
+      if (Platform.OS === 'web' && navigator.clipboard) {
+        await navigator.clipboard.writeText(address);
+        Alert.alert('Succès', 'Adresse copiée dans le presse-papiers');
+      } else {
+        // Fallback to React Native Clipboard (will be imported dynamically)
+        const { default: Clipboard } = await import('react-native').then(rn => ({ default: rn.Clipboard }));
+        Clipboard.setString(address);
+        Alert.alert('Succès', 'Adresse copiée dans le presse-papiers');
+      }
+    } catch (error) {
+      console.log('Failed to copy address:', error);
+      Alert.alert('Erreur', 'Impossible de copier l\'adresse');
+    }
+  };
+
+  const handleBuy = () => {
+    Alert.alert('Acheter', 'Fonctionnalité à venir : achat de crypto avec carte bancaire.');
+  };
+
+  const handleSell = () => {
+    Alert.alert('Vendre', 'Fonctionnalité à venir : vente de crypto vers compte bancaire.');
   };
 
   return (
@@ -127,6 +191,20 @@ function DashboardScreen() {
         <View style={styles.networkBadge}>
           <Text style={styles.networkBadgeText}>{currentNetwork.name} - Testnet</Text>
         </View>
+      <View style={styles.infoBox}>
+        <Text style={styles.label}>Adresse :</Text>
+        <View style={styles.addressContainer}>
+          <Text style={styles.address} selectable={true}>
+            {address}
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.copyButton} onPress={handleCopyAddress}>
+          <Text style={styles.copyButtonText}>📋 Copier l'adresse</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.label}>Solde total :</Text>
+        <Text style={styles.balance}>{balance} {currentNetwork.symbol}</Text>
+      </View>
 
         {/* Balance Section */}
         <View style={styles.balanceSection}>
@@ -142,6 +220,23 @@ function DashboardScreen() {
           <TouchableOpacity style={styles.actionButton} onPress={handleBuy}>
             <View style={styles.actionIcon}>
               <Text style={styles.actionIconText}>💳</Text>
+      <FlatList
+        data={assets}
+        keyExtractor={(item) => item.contractAddress || 'ETH'}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.assetItem}
+            onPress={() => handleSend(item)}>
+            <View style={styles.assetInfo}>
+              {item.logo ? (
+                <Text style={styles.assetLogo}>🪙</Text>
+              ) : (
+                <Text style={styles.assetLogo}>💎</Text>
+              )}
+              <View style={styles.assetDetails}>
+                <Text style={styles.assetSymbol}>{item.symbol}</Text>
+                <Text style={styles.assetBalance}>{item.balance}</Text>
+              </View>
             </View>
             <Text style={styles.actionText}>Acheter</Text>
           </TouchableOpacity>
@@ -192,6 +287,36 @@ function DashboardScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+        )}
+        style={styles.assetsList}
+      />
+
+      <Text style={styles.sectionTitle}>Actions</Text>
+
+      <View style={styles.actionsRow}>
+        <TouchableOpacity style={[styles.actionButton, styles.primaryAction]} onPress={handleReceive}>
+          <Text style={styles.actionIcon}>📥</Text>
+          <Text style={styles.actionButtonText}>Recevoir</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.actionButton, styles.primaryAction]} onPress={handleBuy}>
+          <Text style={styles.actionIcon}>💳</Text>
+          <Text style={styles.actionButtonText}>Acheter</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.actionsRow}>
+        <TouchableOpacity style={[styles.actionButton, styles.disabledAction]} onPress={handleSell}>
+          <Text style={styles.actionIcon}>💰</Text>
+          <Text style={styles.actionButtonText}>Vendre</Text>
+        </TouchableOpacity>
+      </View>
+
+      {Platform.OS !== 'web' && (
+        <TouchableOpacity style={styles.button} onPress={lockWallet}>
+          <Text style={styles.buttonText}>Verrouiller</Text>
+        </TouchableOpacity>
+      )}
 
         {/* Token List */}
         {activeTab === 'tokens' && (
@@ -419,6 +544,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 2,
+  addressContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  address: {
+    fontSize: 12,
+    color: '#333',
+    fontFamily: 'monospace',
+    lineHeight: 18,
+  },
+  copyButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  copyButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   tokenBalanceSymbol: {
     color: '#8B92A6',
@@ -491,6 +642,37 @@ const styles = StyleSheet.create({
   },
   modalCloseButton: {
     backgroundColor: '#037DD6',
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  actionButton: {
+    flex: 1,
+    backgroundColor: '#007AFF',
+    paddingVertical: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginHorizontal: 5,
+    flexDirection: 'column',
+  },
+  primaryAction: {
+    backgroundColor: '#007AFF',
+  },
+  disabledAction: {
+    backgroundColor: '#B0BEC5',
+  },
+  actionIcon: {
+    fontSize: 24,
+    marginBottom: 5,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  transactionItem: {
+    backgroundColor: '#F5F5F5',
     borderRadius: 10,
     padding: 15,
     marginTop: 10,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Provider as PaperProvider } from 'react-native-paper';
@@ -22,6 +22,11 @@ export default function App() {
   const isWalletCreated = useWalletStore((state) => state.isWalletCreated);
   const isWalletUnlocked = useWalletStore((state) => state.isWalletUnlocked);
   const needsBackup = useWalletStore((state) => state.needsBackup);
+  const checkStorage = useWalletStore((state) => state.actions.checkStorage);
+
+  useEffect(() => {
+    checkStorage();
+  }, [checkStorage]);
 
   return (
     <PaperProvider>
