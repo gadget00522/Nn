@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import useWalletStore from '../store/walletStore';
+import { useTranslation } from 'react-i18next';
 
 function SendScreen() {
+  const { t } = useTranslation();
   const [toAddress, setToAddress] = useState('');
   const [amount, setAmount]       = useState('');
 
@@ -14,31 +16,30 @@ function SendScreen() {
   const hasBackedUp    = useWalletStore((s) => s.hasBackedUp);
   const isUnlocked     = useWalletStore((s) => s.isWalletUnlocked);
 
-  const handleSend = () => {
-    if (!toAddress.trim() || !amount.trim()) return;
-    sendTransaction(toAddress.trim(), amount.trim());
-  };
-
-  const handleBack = () => {
-    setScreen('dashboard', null);
-  };
-
   const asset = assetToSend || { symbol: 'ETH', balance: '0', decimals: 18 };
 
   const disabledReason = !isUnlocked
-    ? 'Déverrouille le wallet avant d’envoyer.'
+    ? t('wallet.send_disabled_locked')
     : !hasBackedUp
-      ? 'Fais le backup pour activer les envois.'
+      ? t('wallet.send_disabled_backup')
       : (!toAddress.trim() || !amount.trim())
-        ? 'Complète les champs.'
+        ? 'Champs requis'
         : null;
+
+  const handleSend = () => {
+    if (disabledReason === null) {
+      sendTransaction(toAddress.trim(), amount.trim());
+    }
+  };
+
+  const handleBack = () => setScreen('dashboard', null);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Envoyer {asset.symbol}</Text>
 
       <View style={styles.formContainer}>
-        <Text style={styles.label}>Solde disponible : {asset.balance} {asset.symbol}</Text>
+        <Text style={styles.label}>Solde : {asset.balance} {asset.symbol}</Text>
 
         <Text style={styles.label}>Adresse destinataire</Text>
         <TextInput
@@ -46,7 +47,7 @@ function SendScreen() {
           placeholder="0x..."
           value={toAddress}
           onChangeText={setToAddress}
-          editable={!isSending && isUnlocked && hasBackedUp}
+          editable={!isSending && disabledReason === null}
           autoCapitalize="none"
           autoCorrect={false}
         />
@@ -58,7 +59,7 @@ function SendScreen() {
           value={amount}
           onChangeText={setAmount}
           keyboardType="decimal-pad"
-          editable={!isSending && isUnlocked && hasBackedUp}
+          editable={!isSending && disabledReason === null}
         />
 
         {disabledReason && (
@@ -81,10 +82,7 @@ function SendScreen() {
         ) : (
           <>
             <TouchableOpacity
-              style={[
-                styles.button,
-                (disabledReason !== null) && styles.buttonDisabled
-              ]}
+              style={[styles.button, disabledReason !== null && styles.buttonDisabled]}
               onPress={handleSend}
               disabled={disabledReason !== null}
             >
