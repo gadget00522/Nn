@@ -18,18 +18,23 @@ const babelLoaderConfiguration = {
     path.resolve(appDirectory, 'node_modules/react-native-paper'),
     path.resolve(appDirectory, 'node_modules/react-native-safe-area-context'),
     path.resolve(appDirectory, 'node_modules/react-native-toast-message'),
+    // --- AJOUTS POUR LE QR CODE & SVG ---
+    path.resolve(appDirectory, 'node_modules/react-native-svg'),
+    path.resolve(appDirectory, 'node_modules/react-native-qrcode-svg'),
+    path.resolve(appDirectory, 'node_modules/nativewind'),
   ],
   use: {
     loader: 'babel-loader',
     options: {
       cacheDirectory: true,
+      // On garde ces options pour éviter les conflits
       babelrc: false,
       configFile: false,
       presets: [
         ['@babel/preset-env', { targets: { browsers: ['last 2 versions'] } }],
         '@babel/preset-react',
         '@babel/preset-typescript',
-        '@babel/preset-flow',
+        '@babel/preset-flow', // Nécessaire pour certains modules React Native
       ],
       plugins: [
         ['react-native-web', { commonjs: true }],
@@ -49,10 +54,10 @@ module.exports = {
     filename: 'bundle.web.js',
   },
   resolve: {
-    extensions: ['.web.tsx', '.web.ts', '.tsx', '.ts', '.web.js', '.js'],
+    extensions: ['.web.tsx', '.web.ts', '.tsx', '.ts', '.web.js', '.js', '.jsx', '.web.jsx'],
     alias: {
       'react-native$': 'react-native-web',
-      // C'EST ICI LA MAGIE : On remplace le Keychain par notre mock
+      // Leurre pour le Keychain qui n'existe pas sur le web
       'react-native-keychain': path.resolve(appDirectory, 'keychain.mock.js'),
     },
   },
