@@ -85,7 +85,6 @@ const useWalletStore = create((set, get) => ({
           encryptedMnemonicPayload: encryptedPayload,
         });
       } catch (e) {
-        console.log('checkStorage error', e);
         set({ isWalletCreated: false });
       }
     },
@@ -107,8 +106,7 @@ const useWalletStore = create((set, get) => ({
           localStorage.setItem('wallet_needsBackup', 'true');
           localStorage.setItem('wallet_hasBackedUp', 'false');
         } catch (e) {
-          console.warn('Encryption failed fallback', e);
-            webStorage.setItem('wallet_mnemonic', phrase);
+          webStorage.setItem('wallet_mnemonic', phrase);
           localStorage.setItem('wallet_needsBackup', 'true');
           localStorage.setItem('wallet_hasBackedUp', 'false');
           set({ securityLevel: 'weak' });
@@ -149,7 +147,6 @@ const useWalletStore = create((set, get) => ({
             localStorage.setItem('wallet_needsBackup', 'false');
             localStorage.setItem('wallet_hasBackedUp', 'true');
           } catch (e) {
-            console.warn('Encryption failed fallback', e);
             webStorage.setItem('wallet_mnemonic', mnemonic.trim());
             localStorage.setItem('wallet_needsBackup', 'false');
             localStorage.setItem('wallet_hasBackedUp', 'true');
@@ -171,8 +168,7 @@ const useWalletStore = create((set, get) => ({
           hasBackedUp: true,
         });
         return address;
-      } catch (e) {
-        console.log('importWalletFromMnemonic error', e);
+      } catch {
         throw new Error('Mnemonic invalide');
       }
     },
@@ -219,7 +215,6 @@ const useWalletStore = create((set, get) => ({
         set({ mnemonic: credentials.password, address: wallet.address, isWalletUnlocked: true });
         return true;
       } catch (e) {
-        console.log('unlockWallet error', e);
         throw e;
       }
     },
@@ -276,12 +271,7 @@ const useWalletStore = create((set, get) => ({
             const meta = metadataList[i];
             if (!meta.symbol) return null;
             const rawStr = t.tokenBalance;
-            let raw;
-            if (rawStr.startsWith('0x')) {
-              raw = parseInt(rawStr, 16);
-            } else {
-              raw = Number(rawStr);
-            }
+            let raw = rawStr.startsWith('0x') ? parseInt(rawStr, 16) : Number(rawStr);
             const decimals = meta.decimals || 18;
             const bal = raw / Math.pow(10, decimals);
             return {
@@ -303,7 +293,6 @@ const useWalletStore = create((set, get) => ({
           withMetadata: true,
           maxCount: 20,
         });
-
         const receivedTransfers = await alchemy.core.getAssetTransfers({
           fromBlock: '0x0',
           toBlock: 'latest',
@@ -314,17 +303,15 @@ const useWalletStore = create((set, get) => ({
           maxCount: 20,
         });
 
-        const allTransfers = [...sentTransfers.transfers, ...receivedTransfers.transfers].sort(
-          (a, b) => new Date(b.metadata.blockTimestamp) - new Date(a.metadata.blockTimestamp),
-        );
+        const allTransfers = [...sentTransfers.transfers, ...receivedTransfers.transfers]
+          .sort((a, b) => new Date(b.metadata.blockTimestamp) - new Date(a.metadata.blockTimestamp));
 
         set({
           balance: balanceEth,
           transactions: allTransfers.slice(0, 40),
           tokenBalances: finalTokenList,
         });
-      } catch (e) {
-        console.log('fetchData error', e);
+      } catch {
         set({ balance: '0', transactions: [], tokenBalances: [] });
       }
     },
@@ -332,12 +319,7 @@ const useWalletStore = create((set, get) => ({
     setScreen: (screenName, asset = null) => set({ currentScreen: screenName, assetToSend: asset }),
 
     switchNetwork: (network) =>
-      set({
-        currentNetwork: network,
-        balance: '0',
-        tokenBalances: [],
-        transactions: [],
-      }),
+      set({ currentNetwork: network, balance: '0', tokenBalances: [], transactions: [] }),
 
     sendTransaction: async (toAddress, amount) => {
       set({ isSending: true, sendError: null });
@@ -367,7 +349,6 @@ const useWalletStore = create((set, get) => ({
         await get().actions.fetchData();
         get().actions.setScreen('dashboard');
       } catch (e) {
-        console.log('sendTransaction error', e);
         set({ sendError: e.message });
       } finally {
         set({ isSending: false });
@@ -393,7 +374,6 @@ const useWalletStore = create((set, get) => ({
         await wcService.approveSession(walletConnectRequest.id, accounts, currentNetwork.chainId);
         set({ walletConnectRequest: null });
       } catch (e) {
-        console.error('approveSession error', e);
         throw e;
       }
     },
@@ -407,7 +387,6 @@ const useWalletStore = create((set, get) => ({
         await wcService.rejectSession(walletConnectRequest.id);
         set({ walletConnectRequest: null });
       } catch (e) {
-        console.error('rejectSession error', e);
         throw e;
       }
     },
@@ -477,7 +456,6 @@ const useWalletStore = create((set, get) => ({
           await get().actions.fetchData();
         }
       } catch (e) {
-        console.error('approveRequest error', e);
         throw e;
       }
     },
@@ -491,7 +469,6 @@ const useWalletStore = create((set, get) => ({
         await wcService.rejectRequest(walletConnectRequest.topic, walletConnectRequest.id);
         set({ walletConnectRequest: null });
       } catch (e) {
-        console.error('rejectRequest error', e);
         throw e;
       }
     },
