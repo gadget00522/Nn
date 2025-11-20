@@ -1,6 +1,6 @@
 const path = require('path');
-const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const webpack = require('webpack');
 
 const appDirectory = path.resolve(__dirname);
 
@@ -13,18 +13,20 @@ const compileNodeModules = [
   'react-native-paper',
   'react-native-vector-icons',
   'react-native-safe-area-context',
+  'react-native-svg',
+  'react-native-qrcode-svg',
   'react-native-toast-message',
   'react-native-screens',
   '@react-navigation',
   'alchemy-sdk',
-  'firebase',
+  'firebase'
 ];
 
 const babelLoaderConfiguration = {
   test: /\.(js|jsx|ts|tsx)$/,
   include: (input) => {
     if (!input.includes('node_modules')) return true;
-    return compileNodeModules.some((moduleName) => input.includes(moduleName));
+    return compileNodeModules.some(m => input.includes(m));
   },
   use: {
     loader: 'babel-loader',
@@ -32,13 +34,9 @@ const babelLoaderConfiguration = {
       cacheDirectory: true,
       babelrc: false,
       configFile: false,
-      presets: [['module:metro-react-native-babel-preset']],
+      presets: ['module:metro-react-native-babel-preset'],
       plugins: [
         ['react-native-web', { commonjs: true }],
-        ['@babel/plugin-proposal-export-namespace-from'],
-        ['@babel/plugin-proposal-class-properties', { loose: true }],
-        ['@babel/plugin-proposal-private-methods', { loose: true }],
-        ['@babel/plugin-proposal-private-property-in-object', { loose: true }]
       ],
     },
   },
@@ -58,7 +56,7 @@ module.exports = {
     alias: {
       'react-native$': 'react-native-web',
       'react-native-keychain': path.resolve(appDirectory, 'keychain.mock.js'),
-      // Décommente cette ligne si les erreurs abitype persistent :
+      // Si les erreurs abitype persistent, décommente la ligne suivante:
       // 'abitype': path.resolve(appDirectory, 'abitype-shim.js'),
     },
     fallback: {
@@ -79,7 +77,7 @@ module.exports = {
       {
         test: /\.ttf$/,
         loader: 'url-loader',
-        include: path.resolve(__dirname, 'node_modules/react-native-vector-icons'),
+        include: path.resolve(appDirectory, 'node_modules/react-native-vector-icons'),
       },
     ],
   },
