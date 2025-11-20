@@ -5,11 +5,11 @@ import {
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { useNavigation } from '@react-navigation/native';
-import useWalletStore, { SUPPORTED_NETWORKS } from '../store/walletStore';
+import { useWalletStore, SUPPORTED_NETWORKS } from '../store/walletStore';
 import { useTranslation } from 'react-i18next';
 
 function DashboardScreen() {
-  const { t } = useTranslation();
+  const { t } = useTranslation(); // Si i18n n'est pas installé, ça peut être vide, mais on laisse pour l'instant
   const navigation = useNavigation();
 
   const address = useWalletStore((state) => state.address);
@@ -27,11 +27,11 @@ function DashboardScreen() {
     if (address) {
       fetchData();
     }
-  }, [address, currentNetwork, fetchData]);
+  }, [address, currentNetwork]);
 
   const assets = [
     {
-      symbol: currentNetwork.symbol,
+      symbol: currentNetwork?.symbol || 'ETH',
       balance: balance,
       logo: null,
       contractAddress: null,
@@ -45,7 +45,7 @@ function DashboardScreen() {
     try {
       if (Platform.OS === 'web' && navigator.clipboard) {
         await navigator.clipboard.writeText(address);
-        Toast.show({ type: 'success', text1: 'Copied', text2: 'Address copied' });
+        Toast.show({ type: 'success', text1: 'Copié', text2: 'Adresse copiée' });
       } else {
         const { Clipboard } = await import('react-native');
         Clipboard.setString(address);
@@ -58,13 +58,13 @@ function DashboardScreen() {
 
   const handleSettings = () => {
     if (navigation && typeof navigation.navigate === 'function') {
-      navigation.navigate('Settings');
+      // navigation.navigate('Settings'); // Décommente quand Settings existe
     }
   };
 
   const handleReceive = () => navigation.navigate('Receive');
-  const handleSend = () => navigation.navigate('Send');
-  const handleSwap = () => navigation.navigate('Scan'); // placeholder swap -> scan
+  const handleSend = () => navigation.navigate('Send', { asset: assets[0] }); // Par défaut on envoie le natif
+  const handleSwap = () => console.log("Swap bientôt");
 
   return (
     <View style={styles.container}>
@@ -96,7 +96,7 @@ function DashboardScreen() {
                 <TouchableOpacity
                   style={[
                     styles.networkItem,
-                    item.chainId === currentNetwork.chainId && styles.networkItemSelected,
+                    currentNetwork && item.chainId === currentNetwork.chainId && styles.networkItemSelected,
                   ]}
                   onPress={() => {
                     switchNetwork(item);
@@ -120,7 +120,7 @@ function DashboardScreen() {
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.networkBadge}>
-          <Text style={styles.networkBadgeText}>{currentNetwork.name} - Testnet</Text>
+          <Text style={styles.networkBadgeText}>{currentNetwork?.name || 'Réseau'} - Testnet</Text>
         </View>
 
         <View style={styles.infoBox}>
@@ -136,16 +136,17 @@ function DashboardScreen() {
 
           <Text style={styles.label}>Solde principal :</Text>
           <Text style={styles.balancePlain}>
-            {balance} {currentNetwork.symbol}
+            {balance} {currentNetwork?.symbol}
           </Text>
         </View>
 
         <View style={styles.balanceSection}>
           <Text style={styles.balanceLabel}>Solde total</Text>
           <Text style={styles.balanceValue}>
-            {parseFloat(balance || '0').toFixed(4)} {currentNetwork.symbol}
+            {parseFloat(balance || '0').toFixed(4)} {currentNetwork?.symbol}
           </Text>
-          <Text style={styles.balanceUSD}≈>≈ 0,00 $US (Testnet)</Text>
+          {/* CORRECTION ICI : Suppression du caractère ≈ invalide */}
+          <Text style={styles.balanceUSD}>~ 0,00 $US (Testnet)</Text>
         </View>
 
         <View style={styles.actionButtons}>
@@ -211,10 +212,10 @@ function DashboardScreen() {
               <TouchableOpacity
                 key={idx}
                 style={styles.tokenItem}
-                onPress={() => navigation.navigate('Send')}
+                onPress={() => navigation.navigate('Send', { asset: a })}
               >
                 <View style={styles.tokenIcon}>
-                  <Text style={styles.tokenIconText}>{a.symbol[0]}</Text>
+                  <Text style={styles.tokenIconText}>{a.symbol ? a.symbol[0] : '?'}</Text>
                 </View>
                 <View style={styles.tokenInfo}>
                   <Text style={styles.tokenSymbol}>{a.symbol}</Text>
@@ -357,3 +358,4 @@ const styles = StyleSheet.create({
 });
 
 export default DashboardScreen;
+
