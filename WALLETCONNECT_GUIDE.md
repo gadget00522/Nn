@@ -1,181 +1,91 @@
-# WalletConnect v2 Integration Guide
+# WalletConnect Intégration – Malin Wallet
 
-## Overview
+Ce guide explique comment l’intégration WalletConnect fonctionne dans Malin Wallet (testnet uniquement), comment l’utilisateur établit une session avec une DApp, signe des messages et approuve des transactions.
 
-This document describes the WalletConnect v2 integration added to Malin Wallet, enabling users to connect their wallet to decentralized applications (DApps) via QR code scanning or manual URI input.
+> IMPORTANT: Environnement de test – Ne pas utiliser pour la production.
+> - Mnemonic chiffrée localement (Argon2id v2 ou PBKDF2 v1 en fallback) sur le Web (démo)
+> - Sur mobile (si déploiement natif), la mnemonic serait stockée dans un stockage sécurisé (ex: Keychain)
+> - Pas de hardware wallet, pas d’extension navigateur, pas de sécurité avancée
 
-## Features Implemented
+---
 
-### 1. WalletConnect Service (`src/services/WalletConnectService.ts`)
+## 1. Flux Général
 
-A singleton service that manages WalletConnect v2 sessions:
+1. L’utilisateur ouvre Malin Wallet.
+2. Sur une DApp compatible (ex: Uniswap testnet), l’utilisateur récupère ou scanne un URI WalletConnect v2.
+3. Malin Wallet initialise une session via le service `WalletConnectService`.
+4. Une modale s’affiche dans l’app pour approuver ou refuser la proposition de session.
+5. Une fois la session approuvée, la DApp peut initier des requêtes (signature de message, transactions).
+6. Chaque requête (session_request) est affichée avec détails → l’utilisateur approuve ou rejette.
+7. La réponse est renvoyée à la DApp via `respondRequest`.
 
-- **Initialization**: Automatically initializes Web3Wallet with Core
-- **Pairing**: Connect to DApps via WalletConnect URI
-- **Session Management**: Approve/reject session proposals
-- **Request Handling**: Sign transactions and messages
-- **Event System**: Subscribe to WalletConnect events
+---
 
-**Default Configuration**:
-- Project ID: `459794b1313534b16626642592582276` (public test ID)
-- Metadata: Malin Wallet branding
-- Supported Methods: eth_sendTransaction, eth_sign, personal_sign, eth_signTypedData, etc.
+## 2. Terminologie
 
-### 2. Scan Screen (`src/screens/ScanScreen.tsx`)
+| Terme | Description |
+|-------|-------------|
+| Session Proposal | Demande initiale d’une DApp pour se connecter au wallet |
+| Session Request | Action spécifique (signature, transaction, etc.) |
+| URI WalletConnect | Chaîne `wc:` utilisée pour initier la connexion |
+| Approve / Reject | Actions utilisateur pour autoriser ou refuser |
+| Testnet | Réseaux Sepolia / Mumbai utilisés ici |
 
-A dedicated screen for scanning WalletConnect QR codes:
+---
 
-- **Camera Detection**: Automatically detects if camera is available (web)
-- **Manual Input**: Fallback text input for pasting WalletConnect URIs
-- **Instructions**: Clear step-by-step guide for users
-- **Validation**: URI format validation before pairing
+## 3. Écrans Utilisateur
 
-**Usage Flow**:
-1. Navigate to Scan screen from Dashboard
-2. Scan QR code (if camera available) OR paste URI manually
-3. Service initiates pairing
-4. Modal appears for approval
+| Écran | Rôle |
+|-------|------|
+| ScanScreen | Permet de scanner un QR code ou saisir l’URI manuellement |
+| WalletConnectModal | Affiche proposition/session_request (signature, transaction) |
+| Dashboard | Vue principale du wallet |
+| Settings | Paramètres (langue, thème, sécurité) |
 
-### 3. WalletConnect Modal (`src/components/WalletConnectModal.tsx`)
+---
 
-An always-mounted modal component that displays WalletConnect requests:
+## 4. Scénarios d’Utilisation
 
-**Session Proposals**:
-- Shows DApp name, URL, description, and icon
-- Lists requested permissions
-- Security warnings
-- Approve/Reject buttons
+### Scénario 1: Connexion via QR Code
 
-**Transaction/Signing Requests**:
-- Displays request type (transaction, message, typed data)
-- Shows transaction details (to address, value, etc.)
-- Network information
-- Clear warnings before signing
+1. Sur la DApp → bouton “Connect Wallet”.
+2. Affichage d’un QR code WalletConnect.
+3. Dans Malin Wallet → ouvrir ScanScreen.
+4. Scanner le QR code → URI récupéré.
+5. WalletConnectService.pair(uri) est appelé.
+6. Modale de Session Proposal s’affiche.
+7. Utilisateur clique “Approuver”.
+8. Session établie, la DApp reçoit confirmation.
 
-**Auto-Display**: Modal automatically shows when WalletConnect events arrive
+### Scénario 2: Signature de Message
 
-### 4. Store Integration (`src/store/walletStore.js`)
+1. Sur la DApp → action nécessite signature (ex: login off-chain).
+2. DApp envoie `session_request` avec `method: personal_sign` ou `eth_sign`.
+3. Malin Wallet affiche contenu du message dans WalletConnectModal.
+4. Utilisateur vérifie et approuve.
+5. Le wallet (ethers v5) signe via `wallet.signMessage()` ou `_signTypedData()`.
+6. Signature renvoyée à la DApp → succès.
 
-Extended Zustand store with WalletConnect state and actions:
+### Scénario 3: Transaction On-Chain
 
-**New State**:
-```javascript
-walletConnectRequest: null // Stores pending requests
-```
+1. DApp envoie `eth_sendTransaction` dans `session_request`.
+2. Modale affiche destinataire, montant, réseau.
+3. L’utilisateur approuve.
+4. Le wallet envoie la transaction via `connectedWallet.sendTransaction(tx)`.
+5. Hash renvoyé à la DApp.
+6. Une fois confirmée, l’utilisateur voit la mise à jour dans Dashboard après `fetchData()`.
 
-**New Actions**:
-- `setWalletConnectRequest(request)`: Store incoming request
-- `clearWalletConnectRequest()`: Clear current request
-- `approveSession()`: Approve session proposal with current wallet
-- `rejectSession()`: Reject session proposal
-- `approveRequest()`: Sign transaction/message and respond
-- `rejectRequest()`: Reject signing request
+### Scénario 4: URI Manuel (Pas de Caméra)
 
-**Signing Implementation**:
-- Supports eth_sign, personal_sign, eth_signTypedData, eth_signTypedData_v4
-- Supports eth_sendTransaction, eth_signTransaction
-- Uses ethers.js with wallet mnemonic
-- Automatically refreshes balance after transactions
+1. Sur la DApp, copier l’URI commençant par `wc:`.
+2. Dans ScanScreen, coller l’URI dans le champ texte.
+3. Cliquer “Connecter”.
+4. Modale de proposition → approuver.
+5. Session active.
 
-### 5. Dashboard Integration
+---
 
-Added **Scan** button (📱 icon) to Dashboard action buttons:
-- Positioned alongside Acheter, Échanger, Envoyer, Recevoir
-- Navigates to ScanScreen
-- Available in both light and dark themes
-
-## Testing Guide
-
-### Prerequisites
-1. Deploy wallet to https://pulseailab.me (or test locally)
-2. Have testnet ETH on Ethereum Sepolia
-3. Access to a DApp that supports WalletConnect v2
-
-### Test Scenarios
-
-#### Scenario 1: Connect to Uniswap (Testnet)
-
-1. **Open Uniswap testnet** in a browser:
-   ```
-   https://app.uniswap.org
-   ```
-
-2. **Switch to Sepolia testnet** in Uniswap
-
-3. **Click "Connect Wallet"** → Select "WalletConnect"
-
-4. **Copy the WalletConnect URI** or prepare to scan QR code
-
-5. **In Malin Wallet**:
-   - Navigate to Dashboard
-   - Click **Scan** button (📱)
-   - Paste URI in manual input OR scan QR
-   - Click "Connecter"
-
-6. **Approve Connection**:
-   - WalletConnectModal appears automatically
-   - Review DApp details (Uniswap)
-   - Review permissions
-   - Click "Approuver"
-
-7. **Verify Connection**:
-   - Uniswap should show wallet as connected
-   - Your Sepolia address should be visible
-   - Balance should be displayed
-
-#### Scenario 2: Sign a Transaction
-
-1. **With wallet connected to Uniswap**:
-   - Attempt a swap (e.g., ETH to USDC)
-   - Click "Swap"
-
-2. **In Malin Wallet**:
-   - WalletConnectModal appears automatically
-   - Shows "Demande de Transaction"
-   - Displays: To address, Value, Network (Sepolia)
-   - Security warning shown
-
-3. **Approve or Reject**:
-   - Review transaction details carefully
-   - Click "Approuver" to sign and send
-   - OR click "Rejeter" to cancel
-
-4. **Verify Transaction**:
-   - Transaction submitted to Sepolia
-   - Check on Etherscan: https://sepolia.etherscan.io
-   - Balance updates in Dashboard
-
-#### Scenario 3: Sign a Message
-
-1. **Use a DApp that requires message signing**:
-   - e.g., OpenSea, ENS, or similar
-
-2. **Trigger Sign Message**:
-   - DApp requests signature
-
-3. **In Malin Wallet**:
-   - Modal shows "Demande de Signature de Message"
-   - Message content displayed
-   - Click "Approuver" to sign
-
-4. **Verify**:
-   - DApp receives signature
-   - Action completes
-
-#### Scenario 4: Manual URI Input (No Camera)
-
-1. **Get WalletConnect URI** from DApp
-
-2. **In Malin Wallet**:
-   - Go to Scan screen
-   - See "Caméra non disponible" message
-   - Scroll to "Ou entrez l'URI manuellement"
-   - Paste URI (starts with `wc:`)
-   - Click "Connecter"
-
-3. **Approve** in modal as usual
-
-## Architecture
+## 5. Architecture
 
 ### Event Flow
 
@@ -192,279 +102,278 @@ WalletConnectService
     ↓
     | session_proposal event
     ↓
-WalletConnectModal (listening)
+WalletConnectModal (écoute store)
     ↓
     | setWalletConnectRequest()
     ↓
 walletStore
     ↓
-    | User clicks "Approuver"
+    | User clique "Approuver"
     ↓
 approveSession()
     ↓
 WalletConnectService.approveSession()
     ↓
-    | Session approved
+    | Session approuvée
     ↓
-DApp receives confirmation
+DApp reçoit confirmation
 ```
 
-### Data Flow for Signing
+### Data Flow pour Signature
 
 ```
-DApp requests signature
+DApp → session_request (personal_sign / eth_signTypedData)
     ↓
-    | session_request event
+WalletConnectModal affiche message / typedData
     ↓
-WalletConnectModal displays
-    ↓
-    | User approves
+User approuve
     ↓
 approveRequest()
     ↓
-    | Get mnemonic from store
+ethers.Wallet.fromMnemonic(mnemonic)
     ↓
-ethers.Wallet.fromPhrase(mnemonic)
-    ↓
-    | Sign with wallet
+signMessage() ou _signTypedData()
     ↓
 WalletConnectService.respondRequest()
     ↓
-    | Result sent to DApp
-    ↓
-DApp receives signature
+DApp reçoit la signature
 ```
-
-## Security Considerations
-
-### ⚠️ TESTNET ONLY
-
-**Current Implementation**:
-- Mnemonic stored in localStorage (web) or Keychain (native)
-- localStorage is NOT secure for production
-- No encryption of mnemonic on web
-- Auto-unlock on page refresh
-
-**For Production**:
-1. **Never store mnemonics in localStorage**
-2. **Use secure hardware wallets** (Ledger, Trezor)
-3. **Implement proper encryption** with key derivation (PBKDF2/Argon2)
-4. **Add multi-factor authentication**
-5. **Use secure enclaves** (TPM, SE) where available
-6. **Consider browser extension model** (like MetaMask)
-7. **Implement rate limiting** for signing requests
-8. **Add transaction confirmation delays** for large amounts
-
-### Security Best Practices Implemented
-
-✅ **Session Approval Warnings**:
-- Clear warnings before approving sessions
-- DApp name and URL displayed
-- Permission list shown
-
-✅ **Transaction Review**:
-- Full transaction details displayed
-- Network confirmation
-- Amount and recipient visible
-- Warning about irreversibility
-
-✅ **Message Signing Warnings**:
-- Message content shown (truncated if long)
-- Clear indication of what's being signed
-- Warning to verify content
-
-✅ **Request Validation**:
-- URI format validation
-- Method support checking
-- Error handling for invalid requests
-
-## API Reference
-
-### WalletConnectService
-
-#### Methods
-
-```typescript
-// Initialize service
-await WalletConnectService.getInstance().initialize(projectId?: string)
-
-// Check if initialized
-WalletConnectService.getInstance().isInitialized(): boolean
-
-// Pair with DApp
-await WalletConnectService.getInstance().pair(uri: string)
-
-// Approve session
-await WalletConnectService.getInstance().approveSession(
-  proposalId: number,
-  accounts: string[],
-  chainId: number
-)
-
-// Reject session
-await WalletConnectService.getInstance().rejectSession(proposalId: number)
-
-// Respond to request
-await WalletConnectService.getInstance().respondRequest(
-  topic: string,
-  requestId: number,
-  result: any
-)
-
-// Reject request
-await WalletConnectService.getInstance().rejectRequest(
-  topic: string,
-  requestId: number
-)
-
-// Get active sessions
-WalletConnectService.getInstance().getActiveSessions(): Record<string, any>
-
-// Disconnect session
-await WalletConnectService.getInstance().disconnectSession(topic: string)
-
-// Subscribe to events
-WalletConnectService.getInstance().on(event: string, handler: Function)
-
-// Unsubscribe from events
-WalletConnectService.getInstance().off(event: string, handler: Function)
-```
-
-#### Events
-
-```typescript
-'session_proposal' // When DApp requests connection
-'session_request'  // When DApp requests signing
-'session_delete'   // When session is disconnected
-'session_approved' // When session is approved
-'session_rejected' // When session is rejected
-'request_responded' // When request is signed
-'request_rejected'  // When request is rejected
-'session_disconnected' // When session is manually disconnected
-```
-
-### Store Actions
-
-```javascript
-// Set WalletConnect request
-setWalletConnectRequest(request: {
-  type: 'session_proposal' | 'session_request',
-  id: number,
-  params: any,
-  topic?: string
-})
-
-// Clear request
-clearWalletConnectRequest()
-
-// Approve session
-await approveSession()
-
-// Reject session
-await rejectSession()
-
-// Approve signing request
-await approveRequest()
-
-// Reject signing request
-await rejectRequest()
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### "WalletConnect not initialized"
-**Cause**: Service not initialized before pairing
-**Solution**: Wait for initialization or call `initialize()` manually
-
-#### "Invalid URI"
-**Cause**: URI doesn't start with `wc:` or is malformed
-**Solution**: Verify URI format, get fresh URI from DApp
-
-#### "Failed to pair"
-**Cause**: Network issues or expired URI
-**Solution**: Get new URI, check internet connection
-
-#### "Signature failed"
-**Cause**: Wallet locked or mnemonic unavailable
-**Solution**: Ensure wallet is unlocked before signing
-
-#### "No modal appears"
-**Cause**: WalletConnectModal not mounted or event listener not set up
-**Solution**: Verify modal is in App.tsx, check browser console for errors
-
-### Debugging
-
-Enable console logging:
-```javascript
-// In WalletConnectService.ts, logs are already enabled
-console.log('Session proposal received:', proposal);
-console.log('Session request received:', request);
-```
-
-Check active sessions:
-```javascript
-const sessions = WalletConnectService.getInstance().getActiveSessions();
-console.log('Active sessions:', sessions);
-```
-
-## Dependencies
-
-```json
-{
-  "@walletconnect/web3wallet": "^1.16.1",
-  "@walletconnect/core": "^2.17.1",
-  "@walletconnect/utils": "^2.17.1",
-  "@json-rpc-tools/utils": "^1.7.6",
-  "react-qr-reader": "^3.0.0-beta-1"
-}
-```
-
-## Future Enhancements
-
-### Phase 2
-- [ ] Real QR code scanning with camera (full react-qr-reader integration)
-- [ ] Session management screen (view/disconnect active sessions)
-- [ ] Request history
-- [ ] Gas estimation before signing
-- [ ] Transaction simulation/preview
-
-### Phase 3
-- [ ] Multi-chain support (Polygon, Arbitrum, etc.)
-- [ ] NFT signing support
-- [ ] Batch transactions
-- [ ] Custom RPC endpoints
-- [ ] Address book integration
-
-### Phase 4
-- [ ] Hardware wallet integration
-- [ ] Multi-signature wallets
-- [ ] Time-locked transactions
-- [ ] Advanced security features
-
-## Support
-
-For issues or questions:
-1. Check this documentation
-2. Review console logs
-3. Test with known working DApps (Uniswap testnet)
-4. Verify testnet has funds
-5. Create issue on GitHub with:
-   - Steps to reproduce
-   - Browser/platform info
-   - Console errors
-   - Screenshots
-
-## References
-
-- [WalletConnect v2 Documentation](https://docs.walletconnect.com/)
-- [Web3Wallet SDK](https://docs.walletconnect.com/web3wallet/about)
-- [Ethereum JSON-RPC Methods](https://ethereum.org/en/developers/docs/apis/json-rpc/)
-- [ethers.js Documentation](https://docs.ethers.org/v5/)
 
 ---
 
-**Last Updated**: 2024-11-19
-**Version**: 1.1.0
-**Status**: Production Ready (Testnet Only)
+## 6. Détails Techniques
+
+### Store (walletStore)
+
+- `walletConnectRequest`: objet stockant la proposition ou requête active.
+- Actions:
+  - `setWalletConnectRequest()`
+  - `approveSession(id, accounts, chainId)`
+  - `rejectSession(id)`
+  - `approveRequest()` gère:
+    - `eth_sign`
+    - `personal_sign`
+    - `eth_signTypedData` / `_v4`
+    - `eth_sendTransaction`
+    - `eth_signTransaction`
+  - `rejectRequest()`
+
+### WalletConnectService (pseudo)
+
+```typescript
+class WalletConnectService {
+  private static instance: WalletConnectService;
+  private web3wallet: Web3Wallet;
+
+  static getInstance() {
+    if (!this.instance) this.instance = new WalletConnectService();
+    return this.instance;
+  }
+
+  async initialize(projectId: string) {
+    this.web3wallet = await Web3Wallet.init({ projectId, metadata: { name: 'Malin Wallet', description: 'Testnet Wallet', url: 'https://pulseailab.me', icons: [] } });
+    this.web3wallet.on('session_proposal', this.onSessionProposal);
+    this.web3wallet.on('session_request', this.onSessionRequest);
+  }
+
+  private onSessionProposal = (proposal) => {
+    // set walletConnectRequest in store with type 'session_proposal'
+  }
+
+  private onSessionRequest = (event) => {
+    // set walletConnectRequest in store with type 'session_request'
+  }
+
+  async approveSession(id: number, accounts: string[], chainId: number) {
+    await this.web3wallet.approveSession({
+      id,
+      relayProtocol: 'irn',
+      namespaces: {
+        eip155: {
+          chains: [`eip155:${chainId}`],
+          accounts,
+          methods: ['eth_sendTransaction','eth_signTransaction','personal_sign','eth_sign','eth_signTypedData','eth_signTypedData_v4'],
+          events: []
+        }
+      }
+    });
+  }
+
+  async rejectSession(id: number) {
+    await this.web3wallet.rejectSession({ id, reason: { code: 5000, message: 'User rejected' } });
+  }
+
+  async respondRequest(topic: string, id: number, result: any) {
+    await this.web3wallet.respondSessionRequest({
+      topic,
+      response: { id, jsonrpc: '2.0', result }
+    });
+  }
+
+  async rejectRequest(topic: string, id: number) {
+    await this.web3wallet.respondSessionRequest({
+      topic,
+      response: { id, jsonrpc: '2.0', error: { code: 5000, message: 'User rejected request' } }
+    });
+  }
+}
+```
+
+### Signature Typed Data
+
+Pour `eth_signTypedData_v4`:
+```typescript
+const typedData = JSON.parse(request.params[1]);
+const signature = wallet._signTypedData(typedData.domain, typedData.types, typedData.message);
+```
+
+### Transaction Example
+
+```typescript
+const txRequest = request.params[0];
+const tx = {
+  to: txRequest.to,
+  value: txRequest.value ? ethers.BigNumber.from(txRequest.value) : undefined,
+  data: txRequest.data,
+  gasLimit: txRequest.gas ? ethers.BigNumber.from(txRequest.gas) : undefined,
+  gasPrice: txRequest.gasPrice ? ethers.BigNumber.from(txRequest.gasPrice) : undefined,
+};
+const txResponse = await connectedWallet.sendTransaction(tx);
+```
+
+---
+
+## 7. Sécurité (Testnet)
+
+### Implémenté
+
+- Avertissements avant approbation session.
+- Détails transaction visibles.
+- Message en clair avant signature.
+- Chiffrement local (version 2: Argon2id + AES-GCM) sur web (démo).
+- Auto-lock configurable (0 / 1 / 5 / 15 min).
+
+### Non Implémenté (Production)
+
+- Pas de hardware wallet.
+- Pas de sandbox d’extension.
+- Pas de multi-signature.
+- Pas de rate limiting dynamique.
+- Pas de module anti-phishing.
+
+### Recommandations Production
+
+1. Extension navigateur avec isolation (comme MetaMask).
+2. Stockage chiffré hors localStorage (IndexedDB + WebCrypto, salt par session).
+3. Intégration hardware wallet (Ledger/Trezor).
+4. Journalisation sécurisée des actions (audit).
+5. Rate limiting sur méthodes critiques.
+6. Confirmation renforcée pour montants élevés (2FA / délai).
+
+---
+
+## 8. Gestion des Erreurs
+
+| Type | Cause | Réponse |
+|------|-------|---------|
+| session_proposal invalide | URI malformé | Rejet avec message |
+| méthode non supportée | request.method hors liste | Toast + rejectRequest |
+| signature échoue | mnemonic absente / déverrouillage | Toast + lock |
+| transaction revert | Smart contract error | message d’erreur + affichage hash si existant |
+| integrity failed (v2) | Falsification payload | Forcer wipe + message critique |
+
+---
+
+## 9. Variables Importantes
+
+| Variable | Description |
+|----------|-------------|
+| mnemonic | Phrase de récupération (chiffrée localement) |
+| walletConnectRequest | Objet actif (proposal ou request) |
+| currentNetwork | Détermine RPC / ChainId |
+| encryptionVersion | 1 (PBKDF2) ou 2 (Argon2id) |
+| autoLockMinutes | Durée avant verrouillage automatique |
+
+---
+
+## 10. Migration Chiffrement
+
+Si payload v1 détecté:
+1. Utilisateur ouvre Settings.
+2. Entre mot de passe actuel.
+3. Clique “Upgrade Encryption”.
+4. Déchiffrement PBKDF2 → réchiffrement Argon2id (version:2).
+5. Vérifie localStorage: clé `wallet.encryptedMnemonic.v` contient `"version":2,"kdf":"argon2id"`.
+
+---
+
+## 11. Limites Connues
+
+| Limite | Impact |
+|--------|--------|
+| localStorage sur web | Exposition potentielle si XSS |
+| Pas de signature hors-ligne | Doit être en ligne pour RPC |
+| Pas de multi-compte | Un seul compte affiché |
+| Pas de validation de type avancée sur typedData | Risque si schéma malicieux |
+| UI non internationalisée entièrement | Certains textes encore en dur |
+
+---
+
+## 12. Étapes Futur
+
+1. Ajouter hardware wallet.
+2. Support multi comptes / dérivations (m/44’/60’).
+3. Implémenter signature hors-ligne + file d’attente.
+4. Améliorer logs d’audit.
+5. Ajouter filtrage DApps “fiables”.
+6. Localisation complète (toutes chaînes via i18n).
+
+---
+
+## 13. Exemple Complet de Réponse Session Request (signature)
+
+```typescript
+case 'personal_sign': {
+  const message = request.params[0];
+  const signature = await connectedWallet.signMessage(
+    ethers.utils.isHexString(message) ? ethers.utils.arrayify(message) : message
+  );
+  await wcService.respondRequest(topic, id, signature);
+  break;
+}
+```
+
+---
+
+## 14. Nettoyage Session
+
+- Sur logout / wipe wallet:
+  - Réinitialiser store (`walletConnectRequest = null`)
+  - Appeler éventuellement `web3wallet.disconnectSession()` (si mis en œuvre)
+  - Purger payload chiffré si souhaité (`wipeWallet()`)
+
+---
+
+## 15. FAQ
+
+| Question | Réponse |
+|----------|---------|
+| Pourquoi Argon2id ? | Meilleure résistance aux attaques GPU/mémoire que PBKDF2 |
+| Pourquoi AES-GCM ? | Authenticated encryption (intégrité + confidentialité) |
+| Peut-on ajouter des réseaux ? | Oui → append dans SUPPORTED_NETWORKS |
+| Comment gérer typedData complexe ? | Parse JSON puis `_signTypedData(domain, types, message)` |
+| Pourquoi un “swap” envoi-vers-soi ? | Démo testnet simplifiée (simulateur de transaction) |
+
+---
+
+## 16. Avertissement Final
+
+Ce guide décrit une implémentation DEMO. Pour la production:
+- Retirer toute conservation directe de la mnemonic côté navigateur non durci.
+- Utiliser des solutions spécialisées de wallet.
+- Auditer le code (sécurité / cryptographie).
+- Ajouter tests et revues pour chaque méthode critique WalletConnect.
+
+---
+
+_Fin du guide._
