@@ -4,7 +4,7 @@ import {
   TextInput, Platform
 } from 'react-native';
 import Toast from 'react-native-toast-message';
-import useWalletStore from '../store/walletStore';
+import { useWalletStore } from '../store/walletStore';
 import { useNavigation } from '@react-navigation/native';
 
 function LockedScreen() {
@@ -24,7 +24,7 @@ function LockedScreen() {
       await unlockWallet(password);
       Toast.show({ type: 'success', text1: 'Déverrouillé', text2: 'Succès' });
       navigation.navigate('Dashboard');
-    } catch (e: any) {
+    } catch (e) { // CORRECTION : Enlevé ": any"
       Toast.show({ type: 'error', text1: 'Erreur', text2: e?.message || 'Échec du déverrouillage' });
     } finally {
       setIsUnlocking(false);
@@ -113,3 +113,4 @@ const styles = StyleSheet.create({
 });
 
 export default LockedScreen;
+
