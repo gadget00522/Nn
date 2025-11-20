@@ -1,6 +1,5 @@
-// SHIM TEMPORAIRE pour satisfaire ox / walletconnect si abitype réel pose problème.
-// À retirer quand la version correcte d'abitype fonctionne.
-
+// À utiliser SEULEMENT si les erreurs d'exports abitype persistent.
+// Après ajout, décommente l'alias 'abitype' dans webpack.config.js.
 export function parseAbi(a) { return a; }
 export function parseAbiItem(i) { return i; }
 export function parseAbiParameters(p) { return p; }
