@@ -11,16 +11,18 @@ module.exports = {
     publicPath: "/"
   },
   resolve: {
-    extensions: [".web.js", ".web.ts", ".web.tsx", ".js", ".jsx", ".ts", ".tsx", ".json"],
+    // Mise à jour : on garde les extensions web-first et on priorise .tsx/.ts
+    extensions: [".web.js", ".web.ts", ".web.tsx", ".tsx", ".ts", ".js", ".jsx", ".json"],
     alias: {
       "react-native$": "react-native-web",
-      // forcer l'utilisation du shim local pour abitype si tu as ajouté abitype-shim.js
+      // Forcer l'usage du shim local si abitype pose problème
       "abitype": path.resolve(__dirname, "abitype-shim.js"),
-      // shims pour modules natifs (no-op côté web)
+      // Shims pour modules natifs introuvables côté web
       "react-native-keychain": path.resolve(__dirname, "src/shims/react-native-keychain.js"),
       "@react-native-vector-icons/material-design-icons": path.resolve(__dirname, "src/shims/material-design-icons.js")
     },
     fallback: {
+      // Polyfills pour modules Node core utilisés par certaines dépendances
       crypto: require.resolve("crypto-browserify"),
       stream: require.resolve("stream-browserify"),
       vm: require.resolve("vm-browserify"),
@@ -29,8 +31,9 @@ module.exports = {
       util: require.resolve("util/"),
       buffer: require.resolve("buffer/"),
       process: require.resolve("process/browser"),
-      path: false, // many libs use path only on node; prefer false if not needed
-      fs: false // mark fs as not available in browser builds
+      path: require.resolve("path-browserify"),
+      // fs n'existe pas dans le navigateur — on le marque false
+      fs: false
     }
   },
   module: {
@@ -85,6 +88,7 @@ module.exports = {
     }),
     new NodePolyfillPlugin()
   ],
+  // Activation WebAssembly async requis pour argon2-browser.wasm
   experiments: {
     asyncWebAssembly: true
   },
