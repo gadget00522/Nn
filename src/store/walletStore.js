@@ -10,7 +10,6 @@ import {
   clearEncryptedMnemonic,
 } from '../utils/secureStorage';
 
-// Import Keychain uniquement si natif
 let Keychain = null;
 if (Platform.OS !== 'web') {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -99,23 +98,14 @@ const useWalletStore = create((set, get) => ({
       const phrase = wallet.mnemonic.phrase;
 
       if (Platform.OS === 'web') {
-        try {
-          if (password) {
-            const payload = await encryptMnemonic(phrase, password);
-            storeEncryptedMnemonic(payload);
-            set({ encryptedMnemonicPayload: payload, securityLevel: 'strong' });
-          } else {
-            webStorage.setItem('wallet_mnemonic', phrase); // Optionnel, tu peux décider de refuser création sans password
-            set({ securityLevel: 'weak' });
-          }
-          localStorage.setItem('wallet_needsBackup', 'true');
-          localStorage.setItem('wallet_hasBackedUp', 'false');
-        } catch {
-          webStorage.setItem('wallet_mnemonic', phrase);
-          localStorage.setItem('wallet_needsBackup', 'true');
-          localStorage.setItem('wallet_hasBackedUp', 'false');
-          set({ securityLevel: 'weak' });
+        if (!password) {
+          throw new Error('Mot de passe requis pour création (mode sans mocks).');
         }
+        const payload = await encryptMnemonic(phrase, password);
+        storeEncryptedMnemonic(payload);
+        set({ encryptedMnemonicPayload: payload, securityLevel: 'strong' });
+        localStorage.setItem('wallet_needsBackup', 'true');
+        localStorage.setItem('wallet_hasBackedUp', 'false');
       } else if (Keychain) {
         await Keychain.setGenericPassword('wallet', phrase, {
           accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
@@ -138,24 +128,16 @@ const useWalletStore = create((set, get) => ({
       try {
         const wallet = ethers.Wallet.fromMnemonic(mnemonic.trim());
         const address = wallet.address;
+
         if (Platform.OS === 'web') {
-          try {
-            if (passwordForLocalEncryption) {
-              const payload = await encryptMnemonic(mnemonic.trim(), passwordForLocalEncryption);
-              storeEncryptedMnemonic(payload);
-              set({ encryptedMnemonicPayload: payload, securityLevel: 'strong' });
-            } else {
-              webStorage.setItem('wallet_mnemonic', mnemonic.trim());
-              set({ securityLevel: 'weak' });
-            }
-            localStorage.setItem('wallet_needsBackup', 'false');
-            localStorage.setItem('wallet_hasBackedUp', 'true');
-          } catch {
-            webStorage.setItem('wallet_mnemonic', mnemonic.trim());
-            localStorage.setItem('wallet_needsBackup', 'false');
-            localStorage.setItem('wallet_hasBackedUp', 'true');
-            set({ securityLevel: 'weak' });
+          if (!passwordForLocalEncryption) {
+            throw new Error('Mot de passe requis pour import (mode sans mocks).');
           }
+          const payload = await encryptMnemonic(mnemonic.trim(), passwordForLocalEncryption);
+          storeEncryptedMnemonic(payload);
+          set({ encryptedMnemonicPayload: payload, securityLevel: 'strong' });
+          localStorage.setItem('wallet_needsBackup', 'false');
+          localStorage.setItem('wallet_hasBackedUp', 'true');
         } else if (Keychain) {
           await Keychain.setGenericPassword('wallet', mnemonic.trim(), {
             accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
@@ -195,24 +177,16 @@ const useWalletStore = create((set, get) => ({
       try {
         if (Platform.OS === 'web') {
           const payload = get().encryptedMnemonicPayload;
-          const legacyMnemonic = webStorage.getItem('wallet_mnemonic');
-          if (payload) {
-            const phrase = await decryptMnemonic(payload, password);
-            const wallet = ethers.Wallet.fromMnemonic(phrase);
-            set({ mnemonic: phrase, address: wallet.address, isWalletUnlocked: true });
-            return true;
-          }
-          if (legacyMnemonic) {
-            const wallet = ethers.Wallet.fromMnemonic(legacyMnemonic);
-            set({ mnemonic: legacyMnemonic, address: wallet.address, isWalletUnlocked: true });
-            return true;
-          }
-          throw new Error('Aucun portefeuille trouvé');
+          if (!payload) throw new Error('Aucun portefeuille trouvé');
+          const phrase = await decryptMnemonic(payload, password);
+          const wallet = ethers.Wallet.fromMnemonic(phrase);
+          set({ mnemonic: phrase, address: wallet.address, isWalletUnlocked: true });
+          return true;
         } else if (Keychain) {
           const credentials = await Keychain.getGenericPassword({
             authenticationPrompt: { title: 'Déverrouiller le portefeuille' },
           });
-          if (!credentials) throw new Error('Authentification annulée');
+            if (!credentials) throw new Error('Authentification annulée');
           const wallet = ethers.Wallet.fromMnemonic(credentials.password);
           set({ mnemonic: credentials.password, address: wallet.address, isWalletUnlocked: true });
           return true;
@@ -232,7 +206,6 @@ const useWalletStore = create((set, get) => ({
         localStorage.removeItem('wallet_needsBackup');
         localStorage.removeItem('wallet_hasBackedUp');
         webStorage.removeItem('wallet_mnemonic');
-        webStorage.removeItem('wallet_password');
       }
       set({
         mnemonic: null,
@@ -287,32 +260,9 @@ const useWalletStore = create((set, get) => ({
           })
           .filter(Boolean);
 
-        const sentTransfers = await alchemy.core.getAssetTransfers({
-          fromBlock: '0x0',
-          toBlock: 'latest',
-          fromAddress: address,
-          category: ['external'],
-          order: 'desc',
-          withMetadata: true,
-          maxCount: 20,
-        });
-        const receivedTransfers = await alchemy.core.getAssetTransfers({
-          fromBlock: '0x0',
-          toBlock: 'latest',
-          toAddress: address,
-          category: ['external'],
-          order: 'desc',
-          withMetadata: true,
-          maxCount: 20,
-        });
-
-        const allTransfers = [...sentTransfers.transfers, ...receivedTransfers.transfers].sort(
-          (a, b) => new Date(b.metadata.blockTimestamp) - new Date(a.metadata.blockTimestamp),
-        );
-
         set({
           balance: balanceEth,
-          transactions: allTransfers.slice(0, 40),
+          transactions: [],
           tokenBalances: finalTokenList,
         });
       } catch {
@@ -320,8 +270,7 @@ const useWalletStore = create((set, get) => ({
       }
     },
 
-    setScreen: (screenName, asset = null) =>
-      set({ currentScreen: screenName, assetToSend: asset }),
+    setScreen: (screenName, asset = null) => set({ currentScreen: screenName, assetToSend: asset }),
 
     switchNetwork: (network) =>
       set({
@@ -377,110 +326,93 @@ const useWalletStore = create((set, get) => ({
     approveSession: async () => {
       const { walletConnectRequest, address, currentNetwork } = get();
       if (!walletConnectRequest || walletConnectRequest.type !== 'session_proposal') return;
-      try {
-        const WalletConnectService = (await import('../services/WalletConnectService')).default;
-        const wcService = WalletConnectService.getInstance();
-        const accounts = [`eip155:${currentNetwork.chainId}:${address}`];
-        await wcService.approveSession(walletConnectRequest.id, accounts, currentNetwork.chainId);
-        set({ walletConnectRequest: null });
-      } catch (e) {
-        throw e;
-      }
+      const WalletConnectService = (await import('../services/WalletConnectService')).default;
+      const wcService = WalletConnectService.getInstance();
+      const accounts = [`eip155:${currentNetwork.chainId}:${address}`];
+      await wcService.approveSession(walletConnectRequest.id, accounts, currentNetwork.chainId);
+      set({ walletConnectRequest: null });
     },
 
     rejectSession: async () => {
       const { walletConnectRequest } = get();
       if (!walletConnectRequest || walletConnectRequest.type !== 'session_proposal') return;
-      try {
-        const WalletConnectService = (await import('../services/WalletConnectService')).default;
-        const wcService = WalletConnectService.getInstance();
-        await wcService.rejectSession(walletConnectRequest.id);
-        set({ walletConnectRequest: null });
-      } catch (e) {
-        throw e;
-      }
+      const WalletConnectService = (await import('../services/WalletConnectService')).default;
+      const wcService = WalletConnectService.getInstance();
+      await wcService.rejectSession(walletConnectRequest.id);
+      set({ walletConnectRequest: null });
     },
 
     approveRequest: async () => {
       const { walletConnectRequest, mnemonic, currentNetwork } = get();
       if (!walletConnectRequest || walletConnectRequest.type !== 'session_request') return;
       if (!mnemonic) throw new Error('Wallet non déverrouillé');
-      try {
-        const WalletConnectService = (await import('../services/WalletConnectService')).default;
-        const wcService = WalletConnectService.getInstance();
+      const WalletConnectService = (await import('../services/WalletConnectService')).default;
+      const wcService = WalletConnectService.getInstance();
 
-        const wallet = ethers.Wallet.fromMnemonic(mnemonic);
-        const provider = new ethers.providers.JsonRpcProvider(currentNetwork.rpcUrl);
-        const connectedWallet = wallet.connect(provider);
+      const wallet = ethers.Wallet.fromMnemonic(mnemonic);
+      const provider = new ethers.providers.JsonRpcProvider(currentNetwork.rpcUrl);
+      const connectedWallet = wallet.connect(provider);
 
-        const { topic, id, params } = walletConnectRequest;
-        const { request } = params;
-        let result;
+      const { topic, id, params } = walletConnectRequest;
+      const { request } = params;
+      let result;
 
-        switch (request.method) {
-          case 'eth_sign':
-          case 'personal_sign': {
-            const message = request.params[0];
-            result = await connectedWallet.signMessage(
-              ethers.utils.isHexString(message) ? ethers.utils.arrayify(message) : message,
-            );
-            break;
-          }
-          case 'eth_signTypedData':
-          case 'eth_signTypedData_v4': {
-            const typedData = JSON.parse(request.params[1]);
-            result = await connectedWallet._signTypedData(
-              typedData.domain,
-              typedData.types,
-              typedData.message,
-            );
-            break;
-          }
-          case 'eth_sendTransaction':
-          case 'eth_signTransaction': {
-            const txRequest = request.params[0];
-            const tx = {
-              to: txRequest.to,
-              value: txRequest.value ? ethers.BigNumber.from(txRequest.value) : undefined,
-              data: txRequest.data,
-              gasLimit: txRequest.gas ? ethers.BigNumber.from(txRequest.gas) : undefined,
-              gasPrice: txRequest.gasPrice ? ethers.BigNumber.from(txRequest.gasPrice) : undefined,
-            };
-            if (request.method === 'eth_sendTransaction') {
-              const txResponse = await connectedWallet.sendTransaction(tx);
-              result = txResponse.hash;
-            } else {
-              const signedTx = await connectedWallet.signTransaction(tx);
-              result = signedTx;
-            }
-            break;
-          }
-          default:
-            throw new Error(`Méthode non supportée: ${request.method}`);
+      switch (request.method) {
+        case 'eth_sign':
+        case 'personal_sign': {
+          const message = request.params[0];
+          result = await connectedWallet.signMessage(
+            ethers.utils.isHexString(message) ? ethers.utils.arrayify(message) : message,
+          );
+          break;
         }
-
-        await wcService.respondRequest(topic, id, result);
-        set({ walletConnectRequest: null });
-
-        if (request.method === 'eth_sendTransaction') {
-          await get().actions.fetchData();
+        case 'eth_signTypedData':
+        case 'eth_signTypedData_v4': {
+          const typedData = JSON.parse(request.params[1]);
+          result = await connectedWallet._signTypedData(
+            typedData.domain,
+            typedData.types,
+            typedData.message,
+          );
+          break;
         }
-      } catch (e) {
-        throw e;
+        case 'eth_sendTransaction':
+        case 'eth_signTransaction': {
+          const txRequest = request.params[0];
+          const tx = {
+            to: txRequest.to,
+            value: txRequest.value ? ethers.BigNumber.from(txRequest.value) : undefined,
+            data: txRequest.data,
+            gasLimit: txRequest.gas ? ethers.BigNumber.from(txRequest.gas) : undefined,
+            gasPrice: txRequest.gasPrice ? ethers.BigNumber.from(txRequest.gasPrice) : undefined,
+          };
+          if (request.method === 'eth_sendTransaction') {
+            const txResponse = await connectedWallet.sendTransaction(tx);
+            result = txResponse.hash;
+          } else {
+            const signedTx = await connectedWallet.signTransaction(tx);
+            result = signedTx;
+          }
+          break;
+        }
+        default:
+          throw new Error(`Méthode non supportée: ${request.method}`);
+      }
+
+      await wcService.respondRequest(topic, id, result);
+      set({ walletConnectRequest: null });
+      if (request.method === 'eth_sendTransaction') {
+        await get().actions.fetchData();
       }
     },
 
     rejectRequest: async () => {
       const { walletConnectRequest } = get();
       if (!walletConnectRequest || walletConnectRequest.type !== 'session_request') return;
-      try {
-        const WalletConnectService = (await import('../services/WalletConnectService')).default;
-        const wcService = WalletConnectService.getInstance();
-        await wcService.rejectRequest(walletConnectRequest.topic, walletConnectRequest.id);
-        set({ walletConnectRequest: null });
-      } catch (e) {
-        throw e;
-      }
+      const WalletConnectService = (await import('../services/WalletConnectService')).default;
+      const wcService = WalletConnectService.getInstance();
+      await wcService.rejectRequest(walletConnectRequest.topic, walletConnectRequest.id);
+      set({ walletConnectRequest: null });
     },
   },
 }));
