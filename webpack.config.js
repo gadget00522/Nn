@@ -3,20 +3,37 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 const appDirectory = path.resolve(__dirname);
 
+// Liste de tous les mots-clés qui doivent être compilés
+// Si un fichier contient un de ces mots, il passera par Babel.
+const compileNodeModules = [
+  'react-native',
+  '@react-native',
+  '@expo',
+  'expo',
+  'nativewind',
+  'react-native-paper',
+  'react-native-vector-icons',
+  'react-native-safe-area-context',
+  'react-native-svg',
+  'react-native-qrcode-svg',
+  'react-native-toast-message',
+  'react-native-screens',
+  '@react-navigation',
+  'alchemy-sdk',
+];
+
 const babelLoaderConfiguration = {
   test: /\.(js|jsx|ts|tsx)$/,
-  include: [
-    path.resolve(appDirectory, 'index.web.js'),
-    path.resolve(appDirectory, 'src'),
-    path.resolve(appDirectory, 'App.tsx'),
-    path.resolve(appDirectory, 'node_modules/react-native-vector-icons'),
-    path.resolve(appDirectory, 'node_modules/react-native-paper'),
-    path.resolve(appDirectory, 'node_modules/react-native-safe-area-context'),
-    path.resolve(appDirectory, 'node_modules/react-native-toast-message'),
-    path.resolve(appDirectory, 'node_modules/react-native-svg'),
-    path.resolve(appDirectory, 'node_modules/react-native-qrcode-svg'),
-    path.resolve(appDirectory, 'node_modules/nativewind'),
-  ],
+  // C'EST ICI LA CORRECTION MAJEURE
+  // Au lieu d'une liste de chemins, on utilise une fonction intelligente
+  include: (input) => {
+    // 1. Toujours compiler les fichiers du projet (hors node_modules)
+    if (!input.includes('node_modules')) {
+      return true;
+    }
+    // 2. Compiler les fichiers node_modules qui sont dans notre liste blanche
+    return compileNodeModules.some((moduleName) => input.includes(moduleName));
+  },
   use: {
     loader: 'babel-loader',
     options: {
@@ -24,11 +41,18 @@ const babelLoaderConfiguration = {
       babelrc: false,
       configFile: false,
       presets: [
-        ['module:metro-react-native-babel-preset'], // On utilise le standard React Native
+        ['@babel/preset-env', { targets: { browsers: ['last 2 versions'] } }],
+        '@babel/preset-react',
+        '@babel/preset-typescript',
+        '@babel/preset-flow', // Important pour certains modules Expo
       ],
       plugins: [
-        ['react-native-web', { commonjs: true }], // On garde celui-ci mais attention
-        // Si ça plante encore avec .visitor, on supprimera cette ligne plugins
+        ['react-native-web', { commonjs: true }],
+        '@babel/plugin-proposal-export-namespace-from',
+        // On ajoute ce plugin pour gérer les propriétés de classe dans les vieilles libs
+        ['@babel/plugin-proposal-class-properties', { loose: true }],
+        ['@babel/plugin-proposal-private-methods', { loose: true }],
+        ['@babel/plugin-proposal-private-property-in-object', { loose: true }]
       ],
     },
   },
@@ -56,7 +80,13 @@ module.exports = {
       {
         test: /\.(jpg|png|woff|woff2|eot|ttf|svg)$/,
         type: 'asset/resource'
-      }
+      },
+      // Règle spéciale pour forcer le chargement des polices d'icônes
+      {
+        test: /\.ttf$/,
+        loader: 'url-loader', 
+        include: path.resolve(__dirname, 'node_modules/react-native-vector-icons'),
+      },
     ],
   },
   plugins: [
