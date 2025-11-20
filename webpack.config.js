@@ -53,9 +53,7 @@ module.exports = {
     extensions: ['.web.tsx', '.web.ts', '.tsx', '.ts', '.web.js', '.js', '.jsx', '.web.jsx'],
     alias: {
       'react-native$': 'react-native-web',
-      'react-native-keychain': path.resolve(appDirectory, 'keychain.mock.js'),
-      // Décommente si erreurs abitype persistent:
-      // 'abitype': path.resolve(appDirectory, 'abitype-shim.js'),
+      // 'abitype': path.resolve(appDirectory, 'abitype-shim.js'), // Active seulement si nécessaire
     },
     fallback: {
       crypto: require.resolve('crypto-browserify'),
