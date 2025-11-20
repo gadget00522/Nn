@@ -4,18 +4,18 @@ import useWalletStore from '../store/walletStore';
 
 function SendScreen() {
   const [toAddress, setToAddress] = useState('');
-  const [amount, setAmount] = useState('');
-  
-  const isSending = useWalletStore((state) => state.isSending);
-  const sendError = useWalletStore((state) => state.sendError);
-  const assetToSend = useWalletStore((state) => state.assetToSend);
-  const sendTransaction = useWalletStore((state) => state.actions.sendTransaction);
-  const setScreen = useWalletStore((state) => state.actions.setScreen);
+  const [amount, setAmount]       = useState('');
+
+  const isSending      = useWalletStore((s) => s.isSending);
+  const sendError      = useWalletStore((s) => s.sendError);
+  const assetToSend    = useWalletStore((s) => s.assetToSend);
+  const sendTransaction= useWalletStore((s) => s.actions.sendTransaction);
+  const setScreen      = useWalletStore((s) => s.actions.setScreen);
+  const hasBackedUp    = useWalletStore((s) => s.hasBackedUp);
+  const isUnlocked     = useWalletStore((s) => s.isWalletUnlocked);
 
   const handleSend = () => {
-    if (!toAddress.trim() || !amount.trim()) {
-      return;
-    }
+    if (!toAddress.trim() || !amount.trim()) return;
     sendTransaction(toAddress.trim(), amount.trim());
   };
 
@@ -23,8 +23,15 @@ function SendScreen() {
     setScreen('dashboard', null);
   };
 
-  // Utiliser l'actif sélectionné ou ETH par défaut
   const asset = assetToSend || { symbol: 'ETH', balance: '0', decimals: 18 };
+
+  const disabledReason = !isUnlocked
+    ? 'Déverrouille le wallet avant d’envoyer.'
+    : !hasBackedUp
+      ? 'Fais le backup pour activer les envois.'
+      : (!toAddress.trim() || !amount.trim())
+        ? 'Complète les champs.'
+        : null;
 
   return (
     <View style={styles.container}>
@@ -32,27 +39,33 @@ function SendScreen() {
 
       <View style={styles.formContainer}>
         <Text style={styles.label}>Solde disponible : {asset.balance} {asset.symbol}</Text>
-        
-        <Text style={styles.label}>Adresse du destinataire :</Text>
+
+        <Text style={styles.label}>Adresse destinataire</Text>
         <TextInput
           style={styles.input}
           placeholder="0x..."
           value={toAddress}
           onChangeText={setToAddress}
-          editable={!isSending}
+          editable={!isSending && isUnlocked && hasBackedUp}
           autoCapitalize="none"
           autoCorrect={false}
         />
 
-        <Text style={styles.label}>Montant ({asset.symbol}) :</Text>
+        <Text style={styles.label}>Montant ({asset.symbol})</Text>
         <TextInput
           style={styles.input}
           placeholder="0.0"
           value={amount}
           onChangeText={setAmount}
           keyboardType="decimal-pad"
-          editable={!isSending}
+          editable={!isSending && isUnlocked && hasBackedUp}
         />
+
+        {disabledReason && (
+          <View style={styles.noticeContainer}>
+            <Text style={styles.noticeText}>{disabledReason}</Text>
+          </View>
+        )}
 
         {sendError && (
           <View style={styles.errorContainer}>
@@ -67,16 +80,21 @@ function SendScreen() {
           </View>
         ) : (
           <>
-            <TouchableOpacity 
-              style={[styles.button, (!toAddress.trim() || !amount.trim()) && styles.buttonDisabled]} 
+            <TouchableOpacity
+              style={[
+                styles.button,
+                (disabledReason !== null) && styles.buttonDisabled
+              ]}
               onPress={handleSend}
-              disabled={!toAddress.trim() || !amount.trim()}>
+              disabled={disabledReason !== null}
+            >
               <Text style={styles.buttonText}>Confirmer & Envoyer</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.button, styles.secondaryButton]} 
-              onPress={handleBack}>
+            <TouchableOpacity
+              style={[styles.button, styles.secondaryButton]}
+              onPress={handleBack}
+            >
               <Text style={styles.secondaryButtonText}>Retour</Text>
             </TouchableOpacity>
           </>
@@ -87,84 +105,35 @@ function SendScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#24272A',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 30,
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
-  formContainer: {
-    flex: 1,
-  },
-  label: {
-    fontSize: 16,
-    color: '#D6D9DC',
-    marginBottom: 8,
-    fontWeight: '600',
-  },
+  container: { flex: 1, padding: 20, backgroundColor: '#24272A' },
+  title: { fontSize: 32, fontWeight: 'bold', marginBottom: 30, color: '#FFFFFF', textAlign: 'center' },
+  formContainer: { flex: 1 },
+  label: { fontSize: 16, color: '#D6D9DC', marginBottom: 8, fontWeight: '600' },
   input: {
-    backgroundColor: '#141618',
-    borderRadius: 10,
-    padding: 15,
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#3C4043',
+    backgroundColor: '#141618', borderRadius: 10, padding: 15,
+    fontSize: 16, color: '#FFFFFF', marginBottom: 20,
+    borderWidth: 1, borderColor: '#3C4043'
   },
   button: {
-    backgroundColor: '#037DD6',
-    paddingVertical: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 15,
+    backgroundColor: '#037DD6', paddingVertical: 15, borderRadius: 10,
+    alignItems: 'center', marginBottom: 15
   },
-  buttonDisabled: {
-    backgroundColor: '#4A5568',
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#037DD6',
-  },
-  secondaryButtonText: {
-    color: '#037DD6',
-    fontSize: 18,
-    fontWeight: '600',
-  },
+  buttonDisabled: { backgroundColor: '#4A5568', opacity: 0.6 },
+  buttonText: { color: '#FFFFFF', fontSize: 18, fontWeight: '600' },
+  secondaryButton: { backgroundColor: 'transparent', borderWidth: 2, borderColor: '#037DD6' },
+  secondaryButtonText: { color: '#037DD6', fontSize: 18, fontWeight: '600' },
   errorContainer: {
-    backgroundColor: '#5C2A2A',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#D32F2F',
+    backgroundColor: '#5C2A2A', borderRadius: 10, padding: 15,
+    marginBottom: 20, borderWidth: 1, borderColor: '#D32F2F'
   },
-  errorText: {
-    color: '#FF6B6B',
-    fontSize: 14,
+  errorText: { color: '#FF6B6B', fontSize: 14 },
+  loadingContainer: { alignItems: 'center', marginTop: 30 },
+  loadingText: { marginTop: 15, fontSize: 16, color: '#8B92A6' },
+  noticeContainer: {
+    backgroundColor: '#2D3748', borderRadius: 10, padding: 12,
+    marginBottom: 20, borderLeftWidth: 4, borderLeftColor: '#F59E0B'
   },
-  loadingContainer: {
-    alignItems: 'center',
-    marginTop: 30,
-  },
-  loadingText: {
-    marginTop: 15,
-    fontSize: 16,
-    color: '#8B92A6',
-  },
+  noticeText: { color: '#D6D9DC', fontSize: 13 }
 });
 
 export default SendScreen;
