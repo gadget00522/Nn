@@ -43,9 +43,7 @@ const babelLoaderConfiguration = {
 };
 
 module.exports = {
-  entry: {
-    app: path.join(appDirectory, 'index.web.js'),
-  },
+  entry: { app: path.join(appDirectory, 'index.web.js') },
   output: {
     path: path.resolve(appDirectory, 'dist'),
     publicPath: '/',
@@ -56,7 +54,7 @@ module.exports = {
     alias: {
       'react-native$': 'react-native-web',
       'react-native-keychain': path.resolve(appDirectory, 'keychain.mock.js'),
-      // Si les erreurs abitype persistent, décommente la ligne suivante:
+      // Décommente si erreurs abitype persistent:
       // 'abitype': path.resolve(appDirectory, 'abitype-shim.js'),
     },
     fallback: {
@@ -70,31 +68,18 @@ module.exports = {
   module: {
     rules: [
       babelLoaderConfiguration,
-      {
-        test: /\.(jpg|png|woff|woff2|eot|ttf|svg)$/,
-        type: 'asset/resource'
-      },
+      { test: /\.(jpg|png|woff|woff2|eot|ttf|svg)$/, type: 'asset/resource' },
       {
         test: /\.ttf$/,
         loader: 'url-loader',
-        include: path.resolve(appDirectory, 'node_modules/react-native-vector-icons'),
+        include: path.resolve(__dirname, 'node_modules/react-native-vector-icons'),
       },
     ],
   },
   plugins: [
-    new HtmlWebpackPlugin({
-      template: path.join(appDirectory, 'public/index.html'),
-    }),
-    new webpack.ProvidePlugin({
-      process: 'process/browser',
-      Buffer: ['buffer', 'Buffer'],
-    }),
-    new webpack.DefinePlugin({
-      __DEV__: JSON.stringify(false),
-      global: 'globalThis'
-    })
+    new HtmlWebpackPlugin({ template: path.join(appDirectory, 'public/index.html') }),
+    new webpack.ProvidePlugin({ process: 'process/browser', Buffer: ['buffer', 'Buffer'] }),
+    new webpack.DefinePlugin({ __DEV__: JSON.stringify(false), global: 'globalThis' })
   ],
-  stats: {
-    errorDetails: true
-  }
+  stats: { errorDetails: true }
 };
