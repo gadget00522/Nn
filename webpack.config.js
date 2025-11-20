@@ -1,6 +1,7 @@
 const path = require("path");
 const webpack = require("webpack");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const NodePolyfillPlugin = require("node-polyfill-webpack-plugin");
 
 module.exports = {
   entry: path.resolve(__dirname, "index.web.js"),
@@ -12,7 +13,12 @@ module.exports = {
   resolve: {
     extensions: [".web.js", ".web.ts", ".web.tsx", ".js", ".jsx", ".ts", ".tsx", ".json"],
     alias: {
-      "react-native$": "react-native-web"
+      "react-native$": "react-native-web",
+      // forcer l'utilisation du shim local pour abitype si tu as ajouté abitype-shim.js
+      "abitype": path.resolve(__dirname, "abitype-shim.js"),
+      // shims pour modules natifs (no-op côté web)
+      "react-native-keychain": path.resolve(__dirname, "src/shims/react-native-keychain.js"),
+      "@react-native-vector-icons/material-design-icons": path.resolve(__dirname, "src/shims/material-design-icons.js")
     },
     fallback: {
       crypto: require.resolve("crypto-browserify"),
@@ -23,7 +29,8 @@ module.exports = {
       util: require.resolve("util/"),
       buffer: require.resolve("buffer/"),
       process: require.resolve("process/browser"),
-      path: require.resolve("path-browserify")
+      path: false, // many libs use path only on node; prefer false if not needed
+      fs: false // mark fs as not available in browser builds
     }
   },
   module: {
@@ -60,6 +67,10 @@ module.exports = {
         generator: {
           filename: "assets/images/[name][ext]"
         }
+      },
+      {
+        test: /\.wasm$/i,
+        type: "webassembly/async"
       }
     ]
   },
@@ -71,8 +82,12 @@ module.exports = {
     new webpack.ProvidePlugin({
       Buffer: ["buffer", "Buffer"],
       process: "process/browser"
-    })
+    }),
+    new NodePolyfillPlugin()
   ],
+  experiments: {
+    asyncWebAssembly: true
+  },
   devServer: {
     static: path.resolve(__dirname, "public"),
     compress: true,
