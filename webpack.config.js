@@ -36,7 +36,7 @@ const babelLoaderConfiguration = {
       configFile: false,
       presets: ['module:metro-react-native-babel-preset'],
       plugins: [
-        ['react-native-web', { commonjs: true }],
+        ['react-native-web', { commonjs: true }]
       ],
     },
   },
@@ -52,15 +52,16 @@ module.exports = {
   resolve: {
     extensions: ['.web.tsx', '.web.ts', '.tsx', '.ts', '.web.js', '.js', '.jsx', '.web.jsx'],
     alias: {
-      'react-native$': 'react-native-web',
-      // 'abitype': path.resolve(appDirectory, 'abitype-shim.js'), // Active seulement si nécessaire
+      'react-native$': 'react-native-web'
+      // Active seulement si besoin d'un shim abitype:
+      // 'abitype': path.resolve(appDirectory, 'abitype-shim.js'),
     },
     fallback: {
       crypto: require.resolve('crypto-browserify'),
       stream: require.resolve('stream-browserify'),
       vm: require.resolve('vm-browserify'),
       buffer: require.resolve('buffer/'),
-      process: require.resolve('process/browser'),
+      process: require.resolve('process/browser')
     }
   },
   module: {
@@ -75,9 +76,17 @@ module.exports = {
     ],
   },
   plugins: [
-    new HtmlWebpackPlugin({ template: path.join(appDirectory, 'public/index.html') }),
-    new webpack.ProvidePlugin({ process: 'process/browser', Buffer: ['buffer', 'Buffer'] }),
-    new webpack.DefinePlugin({ __DEV__: JSON.stringify(false), global: 'globalThis' })
+    new HtmlWebpackPlugin({
+      template: path.join(appDirectory, 'public/index.html'),
+    }),
+    new webpack.ProvidePlugin({
+      process: 'process/browser',
+      Buffer: ['buffer', 'Buffer'],
+    }),
+    new webpack.DefinePlugin({
+      __DEV__: JSON.stringify(false),
+      global: 'globalThis'
+    })
   ],
   stats: { errorDetails: true }
 };
