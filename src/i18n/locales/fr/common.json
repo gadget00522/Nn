@@ -1,0 +1,43 @@
+{
+  "auth": {
+    "signup_success": "Compte créé. Email de vérification envoyé.",
+    "login_success": "Bienvenue {{email}}",
+    "email_unverified": "Email non vérifié.",
+    "reset_sent": "Si le compte existe, un lien a été envoyé"
+  },
+  "wallet": {
+    "created": "Portefeuille créé avec succès",
+    "imported": "Portefeuille importé avec succès",
+    "unlocked": "Portefeuille déverrouillé",
+    "locked": "Portefeuille verrouillé",
+    "backup_needed": "Veuillez sauvegarder votre phrase",
+    "send_disabled_backup": "Sauvegarde requise avant envoi",
+    "send_disabled_locked": "Déverrouillez le portefeuille",
+    "invalid_mnemonic": "Mnemonic invalide",
+    "password_changed": "Mot de passe modifié",
+    "encryption_migrated": "Chiffrement amélioré"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "general": "Général",
+    "language": "Langue",
+    "appearance": "Apparence",
+    "security": "Sécurité",
+    "about": "À propos",
+    "select_language": "Choisir la langue",
+    "auto_detect": "Détection auto",
+    "theme_mode": "Mode thème",
+    "dark": "Sombre",
+    "light": "Clair",
+    "system": "Système",
+    "auto_lock": "Délai verrouillage auto",
+    "password_change": "Changer le mot de passe",
+    "old_password": "Ancien mot de passe",
+    "new_password": "Nouveau mot de passe",
+    "confirm_password": "Confirmer mot de passe",
+    "encryption_status": "État du chiffrement",
+    "migrate_encryption": "Améliorer le chiffrement",
+    "copy_address": "Copier l'adresse",
+    "backup_now": "Sauvegarder maintenant"
+  }
+}
