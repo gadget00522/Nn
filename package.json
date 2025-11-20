@@ -1,6 +1,6 @@
 {
   "name": "MalinWallet",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "homepage": "https://pulseailab.me",
   "scripts": {
@@ -11,7 +11,7 @@
   "dependencies": {
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "react-native": "0.72.6",
+    "react-native": "0.73.1",
     "react-native-web": "^0.19.9",
     "react-native-paper": "^5.10.0",
     "react-native-vector-icons": "^10.0.0",
@@ -20,6 +20,7 @@
     "react-native-toast-message": "^2.1.6",
     "react-native-svg": "^13.9.0",
     "react-native-qrcode-svg": "^6.2.0",
+    "react-native-get-random-values": "^1.11.0",
     "nativewind": "^2.0.11",
     "ethers": "^5.7.2",
     "zustand": "^4.4.0",
@@ -42,7 +43,10 @@
     "stream-browserify": "^3.0.0",
     "buffer": "^6.0.3",
     "process": "^0.11.10",
-    "vm-browserify": "^1.1.2"
+    "vm-browserify": "^1.1.2",
+    "i18next": "^23.10.0",
+    "react-i18next": "^13.2.2",
+    "argon2-browser": "^1.18.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
