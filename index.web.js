@@ -1,22 +1,17 @@
-import 'react-native-get-random-values';
-import 'crypto-browserify';
-import { AppRegistry } from 'react-native';
-import App from './App';
-import { name as appName } from './app.json';
-import iconFont from 'react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf';
+// index.web.js — entry web compatible react-native-web
+import "react-native-get-random-values";
+import { AppRegistry } from "react-native";
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App"; // on laisse './App' — webpack.resolve.extensions gère .jsx/.tsx
+import appJson from "./app.json";
 
-const iconFontStyles = `@font-face {
-  src: url(${iconFont});
-  font-family: MaterialCommunityIcons;
-}`;
-
-const style = document.createElement('style');
-style.type = 'text/css';
-style.appendChild(document.createTextNode(iconFontStyles));
-document.head.appendChild(style);
+const appName = (appJson && appJson.name) || "MalinWallet";
 
 AppRegistry.registerComponent(appName, () => App);
-AppRegistry.runApplication(appName, {
-  initialProps: {},
-  rootTag: document.getElementById('root'),
-});
+const rootTag = document.getElementById("root") || document.body.appendChild(document.createElement("div"));
+
+rootTag.id = "root";
+
+const root = ReactDOM.createRoot(rootTag);
+AppRegistry.runApplication(appName, { rootTag });
