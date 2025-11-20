@@ -13,8 +13,6 @@ const compileNodeModules = [
   'react-native-paper',
   'react-native-vector-icons',
   'react-native-safe-area-context',
-  'react-native-svg',
-  'react-native-qrcode-svg',
   'react-native-toast-message',
   'react-native-screens',
   '@react-navigation',
@@ -34,9 +32,7 @@ const babelLoaderConfiguration = {
       cacheDirectory: true,
       babelrc: false,
       configFile: false,
-      presets: [
-        ['module:metro-react-native-babel-preset'],
-      ],
+      presets: [['module:metro-react-native-babel-preset']],
       plugins: [
         ['react-native-web', { commonjs: true }],
         ['@babel/plugin-proposal-export-namespace-from'],
@@ -62,14 +58,15 @@ module.exports = {
     alias: {
       'react-native$': 'react-native-web',
       'react-native-keychain': path.resolve(appDirectory, 'keychain.mock.js'),
+      // Active le shim abitype SI nécessaire (décommente si erreurs persistent)
+      // 'abitype': path.resolve(appDirectory, 'abitype-shim.js'),
     },
-    // LA SOLUTION AUX ERREURS CRYPTO :
     fallback: {
-      "crypto": require.resolve("crypto-browserify"),
-      "stream": require.resolve("stream-browserify"),
-      "vm": require.resolve("vm-browserify"),
-      "buffer": require.resolve("buffer/"),
-      "process": require.resolve("process/browser"),
+      crypto: require.resolve('crypto-browserify'),
+      stream: require.resolve('stream-browserify'),
+      vm: require.resolve('vm-browserify'),
+      buffer: require.resolve('buffer/'),
+      process: require.resolve('process/browser'),
     }
   },
   module: {
@@ -81,7 +78,7 @@ module.exports = {
       },
       {
         test: /\.ttf$/,
-        loader: 'url-loader', 
+        loader: 'url-loader',
         include: path.resolve(__dirname, 'node_modules/react-native-vector-icons'),
       },
     ],
@@ -90,12 +87,16 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: path.join(appDirectory, 'public/index.html'),
     }),
-    // Injecte les variables globales pour le web
     new webpack.ProvidePlugin({
       process: 'process/browser',
       Buffer: ['buffer', 'Buffer'],
     }),
+    new webpack.DefinePlugin({
+      __DEV__: JSON.stringify(false),
+      global: 'globalThis'
+    })
   ],
+  stats: {
+    errorDetails: true
+  }
 };
-
-
