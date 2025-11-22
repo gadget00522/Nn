@@ -4,9 +4,12 @@ import useWalletStore from '../store/walletStore';
 import WalletConnectService from '../services/WalletConnectService';
 
 /**
- * WalletConnectModal - Modal for approving/rejecting WalletConnect requests
- * This component subscribes to walletConnectRequest state and displays
- * a modal when a session proposal or transaction request is pending
+ * Composant Modal pour gérer les requêtes WalletConnect.
+ * Affiche une fenêtre modale pour approuver ou rejeter les propositions de session
+ * et les demandes de signature/transaction provenant de DApps externes.
+ * S'abonne à l'état `walletConnectRequest` du store.
+ *
+ * @returns {JSX.Element | null} Le composant modal ou null si aucune requête active.
  */
 function WalletConnectModal() {
   const walletConnectRequest = useWalletStore((state) => state.walletConnectRequest);
@@ -17,6 +20,9 @@ function WalletConnectModal() {
   const setWalletConnectRequest = useWalletStore((state) => state.actions.setWalletConnectRequest);
   const clearWalletConnectRequest = useWalletStore((state) => state.actions.clearWalletConnectRequest);
 
+  /**
+   * Initialise le service WalletConnect et configure les écouteurs d'événements.
+   */
   useEffect(() => {
     // Initialize WalletConnect and set up event listeners
     const initWalletConnect = async () => {
@@ -63,6 +69,9 @@ function WalletConnectModal() {
     initWalletConnect();
   }, [setWalletConnectRequest, clearWalletConnectRequest]);
 
+  /**
+   * Approuve la requête ou la session en cours.
+   */
   const handleApprove = async () => {
     try {
       if (walletConnectRequest?.type === 'session_proposal') {
@@ -76,6 +85,9 @@ function WalletConnectModal() {
     }
   };
 
+  /**
+   * Rejette la requête ou la session en cours.
+   */
   const handleReject = async () => {
     try {
       if (walletConnectRequest?.type === 'session_proposal') {

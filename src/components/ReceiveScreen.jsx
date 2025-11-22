@@ -22,6 +22,12 @@ if (Platform.OS !== 'web') {
   }
 }
 
+/**
+ * Écran de réception de fonds.
+ * Affiche l'adresse du portefeuille sous forme de texte et de QR Code (sur mobile).
+ *
+ * @returns {JSX.Element} L'interface utilisateur pour recevoir des fonds.
+ */
 function ReceiveScreen() {
   const navigation = useNavigation();
   const address = useWalletStore((state) => state.address);
@@ -30,6 +36,9 @@ function ReceiveScreen() {
 
   const [copiedMessage, setCopiedMessage] = useState(false);
 
+  /**
+   * Retourne à l'écran précédent.
+   */
   const handleBack = () => {
     // Pour l’ancien App.jsx
     setScreen('dashboard');
@@ -44,6 +53,9 @@ function ReceiveScreen() {
     }
   };
 
+  /**
+   * Copie l'adresse dans le presse-papiers et affiche une confirmation.
+   */
   const handleCopyAddress = async () => {
     if (!address) return;
 

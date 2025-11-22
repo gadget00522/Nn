@@ -8,6 +8,13 @@ import { useNavigation } from '@react-navigation/native';
 import { useWalletStore, SUPPORTED_NETWORKS } from '../store/walletStore';
 import { useTranslation } from 'react-i18next';
 
+/**
+ * Écran principal du tableau de bord (Dashboard).
+ * Affiche le solde, la liste des tokens, et les actions principales (Envoyer, Recevoir, Échanger).
+ * Permet également de changer de réseau et de verrouiller le portefeuille.
+ *
+ * @returns {JSX.Element} L'interface utilisateur du tableau de bord.
+ */
 function DashboardScreen() {
   // const { t } = useTranslation(); // Désactivé pour éviter les erreurs si pas configuré
   const navigation = useNavigation();
@@ -23,6 +30,9 @@ function DashboardScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('tokens');
 
+  /**
+   * Récupère les données du portefeuille (solde, tokens) à chaque changement d'adresse ou de réseau.
+   */
   useEffect(() => {
     if (address) {
       fetchData();
@@ -40,6 +50,9 @@ function DashboardScreen() {
     ...tokenBalances,
   ];
 
+  /**
+   * Copie l'adresse du portefeuille dans le presse-papiers.
+   */
   const handleCopyAddress = async () => {
     if (!address) return;
     try {
@@ -57,11 +70,12 @@ function DashboardScreen() {
   };
 
   const handleSettings = () => {
-    // Navigation settings plus tard
+    navigation.navigate('Settings');
   };
 
   const handleReceive = () => navigation.navigate('Receive');
   const handleSend = () => navigation.navigate('Send', { asset: assets[0] });
+  const handleScan = () => navigation.navigate('Scan');
   const handleSwap = () => console.log("Swap bientôt");
 
   return (
@@ -143,7 +157,6 @@ function DashboardScreen() {
           <Text style={styles.balanceValue}>
             {parseFloat(balance || '0').toFixed(4)} {currentNetwork?.symbol}
           </Text>
-          {/* CORRECTION ICI : J'ai enlevé le symbole ≈ qui faisait planter le code */}
           <Text style={styles.balanceUSD}>~ 0,00 $US (Testnet)</Text>
         </View>
 
@@ -291,5 +304,3 @@ const styles = StyleSheet.create({
 });
 
 export default DashboardScreen;
-
-

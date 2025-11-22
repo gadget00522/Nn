@@ -16,8 +16,10 @@ import {
 import useWalletStore from '../../store/walletStore';
 
 /**
- * Google G Logo Component
- * Renders the official Google "G" logo using inline SVG (web) or text (native fallback)
+ * Composant Logo Google G.
+ * Affiche le logo officiel "G" de Google en utilisant un SVG en ligne (Web) ou un texte (fallback natif).
+ *
+ * @returns {JSX.Element} Le logo Google.
  */
 function GoogleGLogo() {
   // For web, render an inline SVG
@@ -38,17 +40,30 @@ function GoogleGLogo() {
 }
 
 interface GoogleButtonProps {
+  /** Désactive le bouton si true. */
   disabled?: boolean;
+  /** Fonction de rappel appelée après une connexion réussie. */
+  onAfterSuccess?: () => void;
 }
 
 /**
- * Google Sign-In Button Component
- * Implements official Google button design with popup/redirect flow
+ * Composant Bouton de Connexion Google.
+ * Implémente le design officiel du bouton Google avec un flux popup/redirection.
+ * Gère la connexion, la liaison du portefeuille et les retours visuels (Toast).
+ *
+ * @param {GoogleButtonProps} props - Les propriétés du composant.
+ * @returns {JSX.Element} Le bouton de connexion Google.
  */
-export default function GoogleButton({ disabled = false }: GoogleButtonProps) {
+export default function GoogleButton({ disabled = false, onAfterSuccess }: GoogleButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const walletStore = useWalletStore();
 
+  /**
+   * Gère le processus de connexion Google.
+   * 1. Tente de se connecter avec Google.
+   * 2. Si succès, lie le portefeuille local s'il existe.
+   * 3. Affiche les messages de succès ou d'erreur.
+   */
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     
@@ -92,6 +107,12 @@ export default function GoogleButton({ disabled = false }: GoogleButtonProps) {
           text2: 'Crée ou importe ton portefeuille.',
         });
       }
+
+      // Appelle le callback de succès si fourni
+      if (onAfterSuccess) {
+        onAfterSuccess();
+      }
+
     } catch (error: any) {
       console.error('Google sign-in error:', error);
       
@@ -158,3 +179,5 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
 });
+
+export default GoogleButton;

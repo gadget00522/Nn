@@ -1,401 +1,308 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
-
 # Malin Wallet
 
-A Web3 wallet application for Ethereum testnets with a MetaMask-inspired dark theme UI.
+Ceci est un nouveau projet [**React Native**](https://reactnative.dev) pour un portefeuille Web3, initialisé avec [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
-## Features
+Une application de portefeuille Web3 pour les testnets Ethereum avec une interface utilisateur sombre inspirée de MetaMask.
 
-- 🦊 MetaMask-style dark theme UI
-- 🔐 Password-based authentication for web (demo mode)
-- 📥 **Wallet import from mnemonic (12/24 words)**
-- 🔥 **Firebase integration**: Wallet address linked to user account
-- 💸 Send and receive ETH on Ethereum Sepolia testnet
-- 🔄 Demo swap functionality
-- 🪙 Token balance viewing
-- ⚙️ Settings and wallet management
-- 📱 Cross-platform: Web, iOS, and Android
+## Fonctionnalités
 
-## Web Deployment
+- 🦊 Interface utilisateur sombre style MetaMask
+- 🔐 Authentification par mot de passe pour le web (mode démo)
+- 📥 **Importation de portefeuille depuis mnémonique (12/24 mots)**
+- 🔥 **Intégration Firebase** : Adresse du portefeuille liée au compte utilisateur
+- 💸 Envoi et réception d'ETH sur le testnet Ethereum Sepolia
+- 🔄 Fonctionnalité d'échange (Swap) de démonstration
+- 🪙 Visualisation des soldes de jetons
+- ⚙️ Paramètres et gestion du portefeuille
+- 📱 Multiplateforme : Web, iOS et Android
 
-The app is deployed at: **https://pulseailab.me**
+## Déploiement Web
 
-### Running Locally (Web)
+L'application est déployée sur : **https://pulseailab.me**
+
+### Exécution Locale (Web)
 
 ```sh
-# Install dependencies
+# Installer les dépendances
 npm install --legacy-peer-deps
 
-# Start development server
+# Démarrer le serveur de développement
 npm run web
 
-# Build for production
+# Construire pour la production
 npm run build
 
-# Serve production build locally
+# Servir la version de production localement
 npm start
 ```
 
-The web app will be available at `http://localhost:8080` in development mode.
+L'application web sera disponible sur `http://localhost:8080` en mode développement.
 
-### Firebase Configuration
+### Configuration Firebase
 
-The app uses Firebase Authentication for web deployments. Firebase credentials are configured in `src/firebaseConfig.ts`:
+L'application utilise Firebase Authentication pour les déploiements web. Les identifiants Firebase sont configurés dans `src/firebaseConfig.ts` :
 
 ```typescript
 const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT.firebaseapp.com',
-  projectId: 'YOUR_PROJECT',
-  storageBucket: 'YOUR_PROJECT.firebasestorage.app',
-  messagingSenderId: 'YOUR_SENDER_ID',
-  appId: 'YOUR_APP_ID',
-  measurementId: 'YOUR_MEASUREMENT_ID',
+  apiKey: 'VOTRE_API_KEY',
+  authDomain: 'VOTRE_PROJET.firebaseapp.com',
+  projectId: 'VOTRE_PROJET',
+  storageBucket: 'VOTRE_PROJET.firebasestorage.app',
+  messagingSenderId: 'VOTRE_SENDER_ID',
+  appId: 'VOTRE_APP_ID',
+  measurementId: 'VOTRE_MEASUREMENT_ID',
 };
 ```
 
-**Note**: The repository includes demo Firebase credentials. For production use, create your own Firebase project and update `src/firebaseConfig.ts` with your credentials.
+**Note** : Le dépôt inclut des identifiants Firebase de démonstration. Pour une utilisation en production, créez votre propre projet Firebase et mettez à jour `src/firebaseConfig.ts`.
 
-### Firebase Authentication Flow
+### Flux d'Authentification Firebase
 
-**On Web Platform Only:**
-1. **Authentication Screen** - First screen shown to unauthenticated users
-   - Sign up with email/password
-   - Log in with existing account
-   - **Sign in with Google** (NEW)
-   - Request password reset
+**Sur la plateforme Web uniquement :**
+1. **Écran d'Authentification** - Premier écran affiché aux utilisateurs non authentifiés
+   - Inscription avec email/mot de passe
+   - Connexion avec un compte existant
+   - **Connexion avec Google** (NOUVEAU)
+   - Demande de réinitialisation de mot de passe
 
-2. **Email Verification** - Required after signup with email/password
-   - Verification email sent automatically
-   - User must verify email before accessing wallet
-   - Google sign-in users are automatically verified
+2. **Vérification d'Email** - Requise après inscription par email/mot de passe
+   - Email de vérification envoyé automatiquement
+   - L'utilisateur doit vérifier son email avant d'accéder au portefeuille
+   - Les utilisateurs Google sont automatiquement vérifiés
 
-3. **Wallet Flow** - After authentication and email verification
-   - Create wallet or unlock existing wallet
-   - Full wallet functionality
+3. **Flux Portefeuille** - Après authentification et vérification de l'email
+   - Créer un portefeuille ou déverrouiller un portefeuille existant
+   - Fonctionnalités complètes du portefeuille
 
-**On Native Platforms (iOS/Android):**
-- Firebase authentication is bypassed
-- Users go directly to wallet creation/unlock flow
+**Sur les plateformes natives (iOS/Android) :**
+- L'authentification Firebase est contournée
+- Les utilisateurs accèdent directement au flux de création/déverrouillage du portefeuille
 
 ### Connexion Google
 
-**Prérequis:**
-1. Activer Google comme fournisseur de connexion dans la Console Firebase:
+**Prérequis :**
+1. Activer Google comme fournisseur de connexion dans la Console Firebase :
    - Aller dans Console Firebase → Authentication → Sign-in method
    - Activer le fournisseur Google
-   - Ajouter les domaines autorisés dans les paramètres du projet (pour les tests locaux: `localhost` et votre domaine de production)
+   - Ajouter les domaines autorisés dans les paramètres du projet (pour les tests locaux : `localhost` et votre domaine de production)
 2. Configurer l'écran de consentement OAuth (l'écran de consentement interne est suffisant pour les tests)
 
-**Fonctionnalités:**
+**Fonctionnalités :**
 - Authentification en un clic avec un compte Google
 - Vérification automatique de l'email (aucun email de vérification nécessaire)
-- Liaison transparente du portefeuille: si un portefeuille existe localement, il est automatiquement lié à votre compte Google
+- Liaison transparente du portefeuille : si un portefeuille existe localement, il est automatiquement lié à votre compte Google
 - Si aucun portefeuille n'existe, vous serez invité à en créer ou en importer un après vous être connecté
-- **Flow intelligent**: utilise popup avec fallback automatique vers redirect si la popup est bloquée par le navigateur
-- **Mobile**: le flow redirect est automatiquement utilisé sur mobile quand la popup n'est pas disponible
+- **Flow intelligent** : utilise une popup avec repli automatique vers la redirection si la popup est bloquée par le navigateur
+- **Mobile** : le flow de redirection est automatiquement utilisé sur mobile quand la popup n'est pas disponible
 
-**Utilisation:**
+**Utilisation :**
 1. Accéder à l'écran d'authentification
 2. Cliquer sur "Continuer avec Google" (avec le logo G officiel)
 3. Sélectionner votre compte Google dans la popup (ou être redirigé)
 4. Si vous avez un portefeuille existant, il sera automatiquement lié
 5. Sinon, vous serez invité à créer ou importer un portefeuille
 
-**Gestion des erreurs:**
+**Gestion des erreurs :**
 - Si la popup est fermée par l'utilisateur, un message convivial s'affiche
 - Si la popup est bloquée, le système bascule automatiquement vers le flow de redirection
 - Tous les codes d'erreur Firebase sont traduits en messages français compréhensibles
 
-**Sécurité:**
-- ⚠️ **IMPORTANT**: Seule l'adresse du portefeuille (publique) est stockée dans Firebase
+**Sécurité :**
+- ⚠️ **IMPORTANT** : Seule l'adresse du portefeuille (publique) est stockée dans Firebase
 - ⚠️ **NE JAMAIS** stocker la phrase mnémonique ou les clés privées dans Firestore
 - Vos clés privées/phrase mnémonique restent chiffrées localement
 - L'authentification Google utilise le flow OAuth 2.0 sécurisé de Firebase
 
-**TODO - Mobile natif:**
-- La connexion Google est actuellement disponible uniquement sur le web
-- TODO: implémenter la connexion Google native avec `expo-auth-session` ou `react-native-google-signin` pour iOS/Android
-
 ### Cas de test
 
-**Cas A: Utilisateur sans portefeuille local**
+**Cas A : Utilisateur sans portefeuille local**
 1. Cliquer sur "Continuer avec Google"
 2. Se connecter avec Google
-3. Voir le toast: "Aucun portefeuille trouvé. Crée ou importe ton portefeuille."
+3. Voir le toast : "Aucun portefeuille trouvé. Crée ou importe ton portefeuille."
 4. Être dirigé vers le flux de création/import de portefeuille
 
-**Cas B: Utilisateur avec portefeuille local**
+**Cas B : Utilisateur avec portefeuille local**
 1. Cliquer sur "Continuer avec Google"
 2. Se connecter avec Google
 3. Après connexion, vérifier dans Firestore que `users/{uid}` contient `walletAddress` et `updatedAt`
 4. Voir le toast de confirmation de liaison du portefeuille
 
-**Cas C: Popup fermée par l'utilisateur**
+**Cas C : Popup fermée par l'utilisateur**
 1. Cliquer sur "Continuer avec Google"
 2. Fermer la popup de connexion Google
-3. Voir un message d'erreur convivial: "La fenêtre de connexion a été fermée."
+3. Voir un message d'erreur convivial : "La fenêtre de connexion a été fermée."
 
-### Firebase Service Files
+### Fichiers de Service Firebase
 
-- **src/firebaseConfig.ts**: Initializes Firebase with project credentials
-- **src/services/authService.ts**: Authentication functions
-  - `signupWithEmail(email, password)`: Create new account
-  - `loginWithEmail(email, password)`: Sign in to existing account
-  - `loginWithGoogle()`: Sign in with Google (web only) - attempts popup first, falls back to redirect if blocked; returns AuthUser or null if redirect started
-  - `handleRedirectResultOnLoad()`: Check for redirect result on app load (web only)
-  - `mapGoogleAuthError(errorCode)`: Map Firebase error codes to user-friendly French messages
-  - `requestPasswordReset(email)`: Send password reset email
-  - `observeAuthState(callback)`: Monitor authentication state changes
-  - `linkWalletAddressToUser(uid, address)`: Link wallet address to user account
-  - `getUserWalletAddress(uid)`: Retrieve wallet address for a user
-- **src/screens/AuthScreen.tsx**: UI for signup/login/password reset with Google sign-in
-- **src/screens/components/GoogleButton.tsx**: Reusable Google sign-in button component with official Google G logo
+- **src/firebaseConfig.ts** : Initialise Firebase avec les identifiants du projet
+- **src/services/authService.ts** : Fonctions d'authentification
+  - `signupWithEmail(email, password)` : Créer un nouveau compte
+  - `loginWithEmail(email, password)` : Se connecter à un compte existant
+  - `loginWithGoogle()` : Se connecter avec Google (web uniquement)
+  - `handleRedirectResultOnLoad()` : Vérifier le résultat de redirection au chargement de l'app
+  - `mapGoogleAuthError(errorCode)` : Traduire les codes d'erreur Firebase en français
+  - `requestPasswordReset(email)` : Envoyer un email de réinitialisation de mot de passe
+  - `observeAuthState(callback)` : Surveiller les changements d'état d'authentification
+  - `linkWalletAddressToUser(uid, address)` : Lier une adresse de portefeuille à un utilisateur
+  - `getUserWalletAddress(uid)` : Récupérer l'adresse de portefeuille d'un utilisateur
+- **src/screens/AuthScreen.tsx** : Interface utilisateur pour l'inscription/connexion
+- **src/screens/components/GoogleButton.tsx** : Composant bouton Google réutilisable
 
-### Testing the Complete Flow on Web
+### Tester le Flux Complet sur Web
 
-1. **Authentication (Web Only)**
-   - Navigate to https://pulseailab.me
-   - Choose "Créer un compte" (Sign up)
-   - Enter email and password (minimum 6 characters)
-   - Confirm password
-   - Check your email for verification link
-   - Click verification link
-   - Return to app and log in
+1. **Authentification (Web Uniquement)**
+   - Naviguer vers https://pulseailab.me
+   - Choisir "Créer un compte"
+   - Entrer email et mot de passe (minimum 6 caractères)
+   - Confirmer le mot de passe
+   - Vérifier votre email via le lien reçu
+   - Retourner sur l'app et se connecter
 
-2. **Create Wallet**
-   - After email verification and login
-   - Click "Créer mon portefeuille"
-   - Set a password (minimum 4 characters) for wallet encryption on web
-   - Note: Wallet data is stored in localStorage (demo mode)
+2. **Créer un Portefeuille**
+   - Après vérification de l'email et connexion
+   - Cliquer sur "Créer mon portefeuille"
+   - Définir un mot de passe (minimum 4 caractères) pour le chiffrement local
+   - Note : Les données du portefeuille sont stockées dans le localStorage (mode démo)
 
-2. **Import Wallet (NEW)**
-   - Navigate to https://pulseailab.me
-   - Click "Importer un portefeuille existant"
-   - Enter your 12 or 24-word recovery phrase
-   - Set a password for local encryption (web demo only)
-   - The wallet is imported and ready to use
-   - **Security**: Your mnemonic is NEVER sent to the server. Only the wallet address is stored in Firestore if you're signed in with Firebase.
+3. **Importer un Portefeuille (NOUVEAU)**
+   - Naviguer vers https://pulseailab.me
+   - Cliquer sur "Importer un portefeuille existant"
+   - Entrer votre phrase de récupération de 12 ou 24 mots
+   - Définir un mot de passe pour le chiffrement local
+   - Le portefeuille est importé et prêt à l'emploi
+   - **Sécurité** : Votre mnémonique n'est JAMAIS envoyée au serveur. Seule l'adresse est stockée si connecté.
 
-3. **Backup Phrase**
-   - Write down your 12-word recovery phrase
-   - Store it securely - this is the ONLY way to recover your wallet
-   - Check the confirmation box
-   - Verify 3 random words from your phrase
+4. **Phrase de Sauvegarde**
+   - Noter votre phrase de récupération de 12 mots
+   - La stocker en lieu sûr - c'est le SEUL moyen de récupérer votre portefeuille
+   - Cocher la case de confirmation
+   - Vérifier 3 mots aléatoires de votre phrase
 
-4. **Dashboard**
-   - View your balance (testnet ETH)
-   - See network status (Ethereum Sepolia - Testnet)
-   - Access four main actions:
-     - 💳 Acheter (Coming soon)
+5. **Tableau de Bord**
+   - Voir votre solde (ETH testnet)
+   - Voir l'état du réseau (Ethereum Sepolia - Testnet)
+   - Accéder aux quatre actions principales :
+     - 💳 Acheter (Bientôt)
      - 🔄 Échanger (Demo swap)
-     - 📤 Envoyer (Send)
-     - 📥 Recevoir (Receive)
+     - 📤 Envoyer
+     - 📥 Recevoir
 
-5. **Receive ETH**
-   - Click "Recevoir"
-   - Copy your wallet address
-   - Get testnet ETH from Sepolia faucet: https://sepoliafaucet.com/
-   - Wait for transaction confirmation
+6. **Recevoir des ETH**
+   - Cliquer sur "Recevoir"
+   - Copier votre adresse de portefeuille
+   - Obtenir des ETH testnet depuis le faucet Sepolia : https://sepoliafaucet.com/
+   - Attendre la confirmation de la transaction
 
-6. **Send ETH**
-   - Click "Envoyer"
-   - Enter recipient address
-   - Enter amount
-   - Confirm transaction
-   - Transaction will appear on Sepolia Etherscan
+7. **Envoyer des ETH**
+   - Cliquer sur "Envoyer"
+   - Entrer l'adresse du destinataire
+   - Entrer le montant
+   - Confirmer la transaction
+   - La transaction apparaîtra sur Sepolia Etherscan
 
-7. **Demo Swap**
-   - Click "Échanger"
-   - Enter amount to swap
-   - This performs a real testnet transaction to your own address
-   - Useful for testing transaction flows
+8. **Paramètres**
+   - Cliquer sur l'icône menu (⚙️) en haut à gauche
+   - Voir la phrase de récupération (avec avertissement)
+   - Verrouiller le portefeuille
+   - Supprimer le portefeuille (avec confirmation)
 
-8. **Settings**
-   - Click menu icon (☰) in top left
-   - View recovery phrase (with warning)
-   - Lock wallet
-   - Delete wallet (with confirmation)
+## Importation de Portefeuille & Intégration Firebase
 
-9. **Lock/Unlock**
-   - Lock wallet from Settings
-   - Enter password to unlock
-   - On native apps, uses biometric authentication
+### Comment ça marche
 
-## Wallet Import & Firebase Integration
+Ce portefeuille implémente un flux d'importation sécurisé avec intégration Firebase :
 
-### How it Works
+1. **Stockage Local Uniquement** :
+   - Votre mnémonique (phrase de récupération) est stockée UNIQUEMENT sur votre appareil
+   - Web : Chiffrée avec mot de passe dans localStorage (démo seulement)
+   - Natif : Sécurisée avec Keychain/SecureStore de l'appareil
 
-This wallet implements a secure wallet import flow with Firebase integration:
+2. **Intégration Firestore** :
+   - Seule votre ADRESSE de portefeuille (publique) est stockée dans Firestore
+   - Stockée sous `users/{uid}/walletAddress`
+   - La mnémonique n'est JAMAIS envoyée à Firebase ou un serveur
 
-1. **Local Storage Only**: 
-   - Your mnemonic (recovery phrase) is stored ONLY on your device
-   - Web: Encrypted with password in localStorage (demo only)
-   - Native: Secured with device Keychain/SecureStore
+### Avertissements de Sécurité
 
-2. **Firestore Integration**:
-   - Only your wallet ADDRESS (public) is stored in Firestore
-   - Stored under `users/{uid}/walletAddress`
-   - The mnemonic is NEVER sent to Firebase or any server
+⚠️ **IMPORTANT** : Ceci est une implémentation **DÉMO/TESTNET UNIQUEMENT**.
 
-3. **Import Process**:
-   - Enter your 12 or 24-word recovery phrase
-   - Set a password for local encryption (web only)
-   - Wallet is validated using ethers.js
-   - Mnemonic is encrypted and stored locally
-   - If signed in with Firebase, the address is linked to your account
+**Authentification Firebase :**
+- Les identifiants Firebase sont inclus dans le dépôt pour la démo
+- Pour la production, utilisez vos propres identifiants et activez les règles de sécurité
 
-### Testing Wallet Import
+**Stockage Portefeuille :**
+- La version Web utilise localStorage (non sécurisé pour de vrais fonds)
+- N'utilisez jamais avec de vrais fonds Mainnet
 
-To test the import functionality:
+**Sécurité Import :**
+- 🔒 Votre mnémonique n'est JAMAIS envoyée à un serveur
+- 🔒 Seule l'adresse publique est stockée dans Firestore
+- 🔒 La mnémonique est chiffrée localement sur votre appareil
 
-```bash
-# 1. Create a test wallet first to get a mnemonic
-# 2. Copy the mnemonic from the backup screen
-# 3. Delete the wallet from settings
-# 4. Use "Importer un portefeuille existant" to restore it
-```
+### Configuration Réseau
 
-### Firebase Firestore Structure
-
-```
-users/
-  {uid}/
-    walletAddress: "0x..."
-    updatedAt: "2025-11-19T..."
-```
-
-**Note**: The mnemonic is NEVER stored in Firestore for security reasons.
-
-### Security Warnings
-
-⚠️ **IMPORTANT**: This is a **DEMO/TESTNET ONLY** implementation.
-
-**Firebase Authentication:**
-- Firebase credentials are included in the repository for demo purposes
-- Email verification is required for web access
-- Firebase Authentication provides secure user authentication
-- For production, rotate Firebase credentials and enable additional security features
-
-**Wallet Storage:**
-- Web version uses localStorage for wallet storage (not secure for production)
-- Private keys should be properly encrypted in production
-- Never use with real mainnet funds
-
-For production deployments:
-- Create your own Firebase project with production security rules
-- Use hardware wallets or secure enclaves for key storage
-- Implement proper encryption for wallet data
-- Never store sensitive data in localStorage
-- Use only on testnets for development
-
-**Wallet Import Security**:
-- 🔒 Your mnemonic is NEVER sent to any server
-- 🔒 Only the public wallet address is stored in Firestore
-- 🔒 Mnemonic is encrypted locally on your device
-- ⚠️ Web demo: Uses localStorage (not production-ready)
-- ✅ Native apps: Uses platform Keychain/SecureStore
-
-### Network Configuration
-
-The app is configured for:
-- **Ethereum Sepolia** (default testnet)
+L'application est configurée pour :
+- **Ethereum Sepolia** (testnet par défaut)
 - **Polygon Mumbai** (testnet)
 
-All transactions are on testnets only. No real funds can be lost.
+Toutes les transactions sont sur des testnets uniquement. Aucun fonds réel ne peut être perdu.
 
-# Getting Started
+# Pour Commencer
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+> **Note** : Assurez-vous d'avoir complété le guide [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) avant de continuer.
 
-## Step 1: Start Metro
+## Étape 1 : Démarrer Metro
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
+Lancez **Metro**, l'outil de build JavaScript pour React Native.
 
 ```sh
-# Using npm
+# Utiliser npm
 npm start
 
-# OR using Yarn
+# OU utiliser Yarn
 yarn start
 ```
 
-## Step 2: Build and run your app
+## Étape 2 : Construire et lancer votre application
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+Ouvrez un nouveau terminal et lancez :
 
 ### Android
 
 ```sh
-# Using npm
+# Utiliser npm
 npm run android
 
-# OR using Yarn
+# OU utiliser Yarn
 yarn android
 ```
 
 ### iOS
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+N'oubliez pas d'installer les dépendances CocoaPods :
 
 ```sh
-bundle install
+cd ios && pod install && cd ..
 ```
 
-Then, and every time you update your native dependencies, run:
+Puis lancez :
 
 ```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
+# Utiliser npm
 npm run ios
 
-# OR using Yarn
+# OU utiliser Yarn
 yarn ios
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+## Dépannage
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+Si vous rencontrez des problèmes, consultez la page [Troubleshooting](https://reactnative.dev/docs/troubleshooting).
 
-## Step 3: Modify your app
+# En Savoir Plus
 
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+- [Site Web React Native](https://reactnative.dev)
+- [Getting Started](https://reactnative.dev/docs/environment-setup)
+- [Learn the Basics](https://reactnative.dev/docs/getting-started)
+- [Blog](https://reactnative.dev/blog)
+- [`@facebook/react-native`](https://github.com/facebook/react-native)

@@ -23,12 +23,18 @@ if (Platform.OS !== 'web') {
   }
 }
 
+/**
+ * Abstraction simple du stockage Web (localStorage) avec gestion des erreurs de disponibilité.
+ */
 const webStorage = {
   getItem: (k) => (typeof localStorage !== 'undefined' ? localStorage.getItem(k) : null),
   setItem: (k, v) => { if (typeof localStorage !== 'undefined') localStorage.setItem(k, v); },
   removeItem: (k) => { if (typeof localStorage !== 'undefined') localStorage.removeItem(k); },
 };
 
+/**
+ * Liste des réseaux blockchain supportés par l'application.
+ */
 const SUPPORTED_NETWORKS = [
   {
     name: 'Ethereum Sepolia',
@@ -48,33 +54,61 @@ const SUPPORTED_NETWORKS = [
   },
 ];
 
+/**
+ * Store Zustand principal pour la gestion de l'état du portefeuille.
+ * Gère la création, le déverrouillage, les transactions, l'état de la connexion WalletConnect, etc.
+ */
 const useWalletStore = create((set, get) => ({
   // Core wallet state
+  /** La phrase mnémonique du portefeuille (disponible uniquement si déverrouillé). */
   mnemonic: null,
+  /** Le payload chiffré de la mnémonique. */
   encryptedMnemonicPayload: null,
+  /** L'adresse publique du portefeuille. */
   address: null,
+  /** Indique si un portefeuille a été créé ou importé. */
   isWalletCreated: false,
+  /** Indique si le portefeuille est actuellement déverrouillé. */
   isWalletUnlocked: false,
+  /** Indique si une sauvegarde de la phrase de récupération est nécessaire. */
   needsBackup: false,
+  /** Indique si l'utilisateur a confirmé avoir sauvegardé sa phrase. */
   hasBackedUp: false,
+  /** Niveau de sécurité actuel (ex: 'weak', 'strong'). */
   securityLevel: 'weak',
+  /** Stockage temporaire de la mnémonique lors de la création (pour affichage). */
   tempPlainMnemonic: null,
+  /** Solde du compte (en ETH ou token natif). */
   balance: '0',
+  /** Historique des transactions (actuellement vide). */
   transactions: [],
+  /** Liste des soldes de tokens ERC20. */
   tokenBalances: [],
+  /** Liste des tokens personnalisés ajoutés par l'utilisateur. */
   customTokens: [],
+  /** Actif sélectionné pour l'envoi. */
   assetToSend: null,
+  /** Réseau blockchain actuellement sélectionné. */
   currentNetwork: SUPPORTED_NETWORKS[0],
+  /** Requête WalletConnect en attente (proposition de session ou requête de signature/transaction). */
   walletConnectRequest: null,
 
   // New preferences / security
+  /** Langue préférée de l'utilisateur ('auto', 'fr', 'en', etc.). */
   language: 'auto',
+  /** Mode de thème ('system', 'light', 'dark'). */
   themeMode: 'system',
+  /** Délai en minutes avant le verrouillage automatique (0 = désactivé). */
   autoLockMinutes: 0,
+  /** Version de l'algorithme de chiffrement utilisé. */
   encryptionVersion: 1,
+  /** Timestamp de la dernière interaction utilisateur. */
   lastInteraction: Date.now(),
 
   actions: {
+    /**
+     * Initialise les préférences de l'utilisateur depuis le stockage local.
+     */
     initializePreferences: () => {
       if (Platform.OS === 'web') {
         const lock = localStorage.getItem('wallet.autoLock');
@@ -83,6 +117,9 @@ const useWalletStore = create((set, get) => ({
         if (lngOverride) set({ language: lngOverride });
       }
     },
+    /**
+     * Active l'observateur pour le verrouillage automatique en cas d'inactivité.
+     */
     applyAutoLockWatcher: () => {
       if (Platform.OS === 'web') {
         window.addEventListener('click', get().actions.recordInteraction);
@@ -95,14 +132,33 @@ const useWalletStore = create((set, get) => ({
         }, 30_000);
       }
     },
+    /**
+     * Enregistre une interaction utilisateur pour repousser le verrouillage automatique.
+     */
     recordInteraction: () => set({ lastInteraction: Date.now() }),
+    /**
+     * Définit la langue de l'application.
+     * @param {string} lng - Code langue.
+     */
     setLanguage: (lng) => set({ language: lng }),
+    /**
+     * Définit le mode de thème.
+     * @param {string} mode - Mode de thème.
+     */
     setThemeMode: (mode) => set({ themeMode: mode }),
+    /**
+     * Configure le délai de verrouillage automatique.
+     * @param {number} minutes - Délai en minutes.
+     */
     setAutoLock: (minutes) => {
       if (Platform.OS === 'web') localStorage.setItem('wallet.autoLock', String(minutes));
       set({ autoLockMinutes: minutes });
     },
 
+    /**
+     * Vérifie si un portefeuille existe dans le stockage (Web ou Keychain).
+     * Met à jour l'état `isWalletCreated` et `needsBackup`.
+     */
     checkStorage: async () => {
       try {
         let walletExists = false;
@@ -134,6 +190,13 @@ const useWalletStore = create((set, get) => ({
       }
     },
 
+    /**
+     * Crée un nouveau portefeuille.
+     * Génère une mnémonique aléatoire, la chiffre et la stocke.
+     *
+     * @param {string} password - Mot de passe pour le chiffrement (Web uniquement).
+     * @returns {Promise<string>} La phrase mnémonique générée.
+     */
     createWallet: async (password = '') => {
       const wallet = ethers.Wallet.createRandom();
       const phrase = wallet.mnemonic?.phrase || wallet.mnemonic;
@@ -173,6 +236,13 @@ const useWalletStore = create((set, get) => ({
       return phrase;
     },
 
+    /**
+     * Importe un portefeuille existant à partir d'une phrase mnémonique.
+     *
+     * @param {string} mnemonic - La phrase de récupération (12 ou 24 mots).
+     * @param {string} passwordForLocalEncryption - Mot de passe pour le chiffrement local (Web).
+     * @returns {Promise<string>} L'adresse du portefeuille importé.
+     */
     importWalletFromMnemonic: async (mnemonic, passwordForLocalEncryption = '') => {
       try {
         const wallet = ethers.Wallet.fromMnemonic(mnemonic.trim());
@@ -212,6 +282,12 @@ const useWalletStore = create((set, get) => ({
       }
     },
 
+    /**
+     * Migre le chiffrement vers la version la plus récente si nécessaire.
+     *
+     * @param {string} password - Le mot de passe actuel.
+     * @returns {Promise<boolean>} True si la migration a eu lieu, sinon False.
+     */
     migrateEncryption: async (password) => {
       const payload = get().encryptedMnemonicPayload;
       if (!payload) throw new Error('Aucun payload');
@@ -223,6 +299,12 @@ const useWalletStore = create((set, get) => ({
       return true;
     },
 
+    /**
+     * Change le mot de passe de chiffrement du portefeuille.
+     *
+     * @param {string} oldPassword - L'ancien mot de passe.
+     * @param {string} newPassword - Le nouveau mot de passe.
+     */
     changePassword: async (oldPassword, newPassword) => {
       const payload = get().encryptedMnemonicPayload;
       if (!payload) throw new Error('Aucun payload chiffré');
@@ -232,6 +314,9 @@ const useWalletStore = create((set, get) => ({
       set({ encryptedMnemonicPayload: newPayload, encryptionVersion: 2 });
     },
 
+    /**
+     * Confirme que la sauvegarde a été effectuée.
+     */
     verifyBackup: () => {
       if (Platform.OS === 'web') {
         localStorage.setItem('wallet_needsBackup', 'false');
@@ -245,6 +330,12 @@ const useWalletStore = create((set, get) => ({
       });
     },
 
+    /**
+     * Déverrouille le portefeuille avec le mot de passe (ou biométrie sur mobile).
+     *
+     * @param {string} password - Mot de passe de déchiffrement.
+     * @returns {Promise<boolean>} True si déverrouillé avec succès.
+     */
     unlockWallet: async (password = '') => {
       try {
         if (Platform.OS === 'web') {
@@ -286,8 +377,14 @@ const useWalletStore = create((set, get) => ({
       }
     },
 
+    /**
+     * Verrouille le portefeuille en effaçant la mnémonique de la mémoire.
+     */
     lockWallet: () => set({ mnemonic: null, isWalletUnlocked: false }),
 
+    /**
+     * Supprime complètement le portefeuille et toutes les données associées.
+     */
     wipeWallet: async () => {
       clearEncryptedMnemonic();
       if (Keychain) await Keychain.resetGenericPassword();
@@ -313,6 +410,9 @@ const useWalletStore = create((set, get) => ({
       });
     },
 
+    /**
+     * Récupère les données du portefeuille (solde, tokens) depuis la blockchain via Alchemy.
+     */
     fetchData: async () => {
       try {
         const { address, currentNetwork } = get();
@@ -360,8 +460,19 @@ const useWalletStore = create((set, get) => ({
       }
     },
 
+    /**
+     * Prépare l'écran d'envoi avec un actif spécifique pré-sélectionné.
+     *
+     * @param {string} screenName - Le nom de l'écran.
+     * @param {object} asset - L'actif à envoyer.
+     */
     setScreen: (screenName, asset = null) => set({ assetToSend: asset }),
 
+    /**
+     * Change le réseau blockchain actif.
+     *
+     * @param {object} network - Le réseau à utiliser.
+     */
     switchNetwork: (network) =>
       set({
         currentNetwork: network,
@@ -370,6 +481,12 @@ const useWalletStore = create((set, get) => ({
         transactions: [],
       }),
 
+    /**
+     * Envoie une transaction (ETH ou Token) à une adresse donnée.
+     *
+     * @param {string} toAddress - L'adresse du destinataire.
+     * @param {string} amount - Le montant à envoyer.
+     */
     sendTransaction: async (toAddress, amount) => {
       set({ isSending: true, sendError: null });
       try {
@@ -403,15 +520,30 @@ const useWalletStore = create((set, get) => ({
       }
     },
 
+    /**
+     * Ajoute un token personnalisé à la liste.
+     *
+     * @param {object} token - Les détails du token.
+     */
     addCustomToken: (token) => {
       const { customTokens } = get();
       if (customTokens.find((t) => t.address.toLowerCase() === token.address.toLowerCase())) return;
       set({ customTokens: [...customTokens, token] });
     },
 
+    /**
+     * Définit la requête WalletConnect actuelle.
+     * @param {object} r - La requête.
+     */
     setWalletConnectRequest: (r) => set({ walletConnectRequest: r }),
+    /**
+     * Efface la requête WalletConnect actuelle.
+     */
     clearWalletConnectRequest: () => set({ walletConnectRequest: null }),
 
+    /**
+     * Approuve une session WalletConnect en attente.
+     */
     approveSession: async () => {
       const { walletConnectRequest, address, currentNetwork } = get();
       if (!walletConnectRequest || walletConnectRequest.type !== 'session_proposal') return;
@@ -426,6 +558,9 @@ const useWalletStore = create((set, get) => ({
       }
     },
 
+    /**
+     * Rejette une session WalletConnect en attente.
+     */
     rejectSession: async () => {
       const { walletConnectRequest } = get();
       if (!walletConnectRequest || walletConnectRequest.type !== 'session_proposal') return;
@@ -439,6 +574,9 @@ const useWalletStore = create((set, get) => ({
       }
     },
 
+    /**
+     * Approuve une requête de session (sign/transaction) WalletConnect.
+     */
     approveRequest: async () => {
       const { walletConnectRequest, mnemonic, currentNetwork } = get();
       if (!walletConnectRequest || walletConnectRequest.type !== 'session_request') return;
@@ -508,6 +646,9 @@ const useWalletStore = create((set, get) => ({
       }
     },
 
+    /**
+     * Rejette une requête de session WalletConnect.
+     */
     rejectRequest: async () => {
       const { walletConnectRequest } = get();
       if (!walletConnectRequest || walletConnectRequest.type !== 'session_request') return;

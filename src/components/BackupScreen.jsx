@@ -9,6 +9,13 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import useWalletStore from '../store/walletStore';
 
+/**
+ * Écran de sauvegarde de la phrase mnémonique (Backup).
+ * Affiche la phrase secrète et avertit l'utilisateur de l'importance de la sauvegarder.
+ * Demande une confirmation explicite avant de passer à la vérification.
+ *
+ * @returns {JSX.Element} L'interface utilisateur pour la sauvegarde.
+ */
 function BackupScreen() {
   const [isChecked, setIsChecked] = useState(false);
   const mnemonic = useWalletStore((state) => state.mnemonic);
@@ -16,6 +23,9 @@ function BackupScreen() {
 
   const navigation = useNavigation();
 
+  /**
+   * Gère la navigation vers l'écran de vérification.
+   */
   const handleContinue = () => {
     // Pour l’ancienne logique (App.jsx)
     setScreen('backupVerify');

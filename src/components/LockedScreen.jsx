@@ -7,12 +7,22 @@ import Toast from 'react-native-toast-message';
 import { useWalletStore } from '../store/walletStore';
 import { useNavigation } from '@react-navigation/native';
 
+/**
+ * Écran de verrouillage du portefeuille.
+ * S'affiche lorsque l'utilisateur a déjà un portefeuille configuré mais qu'il est verrouillé.
+ * Demande le mot de passe (ou biométrie sur mobile) pour déverrouiller.
+ *
+ * @returns {JSX.Element} L'interface utilisateur de déverrouillage.
+ */
 function LockedScreen() {
   const navigation = useNavigation();
   const [password, setPassword] = useState('');
   const [isUnlocking, setIsUnlocking] = useState(false);
   const unlockWallet = useWalletStore((s) => s.actions.unlockWallet);
 
+  /**
+   * Tente de déverrouiller le portefeuille avec le mot de passe fourni.
+   */
   const handleUnlock = async () => {
     if (Platform.OS === 'web' && !password.trim()) {
       Toast.show({ type: 'error', text1: 'Mot de passe requis', text2: 'Entre ton mot de passe.' });
@@ -24,31 +34,20 @@ function LockedScreen() {
       await unlockWallet(password);
       Toast.show({ type: 'success', text1: 'Déverrouillé', text2: 'Succès' });
       navigation.navigate('Dashboard');
-    } catch (e) { // CORRECTION : PLUS DE : any
+    } catch (e) {
       Toast.show({ type: 'error', text1: 'Erreur', text2: e?.message || 'Échec du déverrouillage' });
     } finally {
       setIsUnlocking(false);
     }
   };
 
-  const handleForgotPassword = () => {
-    Toast.show({
-      type: 'info',
-      text1: 'Mot de passe oublié',
-      text2: 'Utilise ta phrase (import) pour restaurer sur web.'
-    });
-  };
-
-  // ... (Reste du composant identique, copie juste le bloc ci-dessus pour la logique)
   return (
     <View style={styles.container}>
-       {/* ... le reste de ton UI ... Copie-colle tout le fichier si tu veux être sûr */}
        <View style={styles.logoContainer}>
         <Text style={styles.logo}>🦊</Text>
         <Text style={styles.brandName}>Malin Wallet</Text>
       </View>
       <Text style={styles.welcomeText}>Portefeuille protégé</Text>
-      {/* ... */}
       <View style={styles.formContainer}>
           <Text style={styles.label}>Mot de passe</Text>
           <TextInput
@@ -85,9 +84,6 @@ const styles = StyleSheet.create({
   button: { backgroundColor: '#037DD6', paddingVertical: 15, paddingHorizontal: 40, borderRadius: 100, alignItems: 'center', marginBottom: 15 },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
-  forgotPassword: { color: '#037DD6', fontSize: 14, textAlign: 'center', marginTop: 10 },
 });
 
 export default LockedScreen;
-
-

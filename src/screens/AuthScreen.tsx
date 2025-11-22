@@ -16,6 +16,11 @@ import { useNavigation } from '@react-navigation/native';
 
 type Mode = 'signup' | 'login' | 'reset';
 
+/**
+ * Écran d'authentification principal.
+ * Permet l'inscription, la connexion et la réinitialisation de mot de passe.
+ * Gère l'authentification via Email/Mot de passe et Google (Web).
+ */
 function AuthScreen() {
   const navigation = useNavigation();
   const [mode, setMode] = useState<Mode>('signup');
@@ -27,12 +32,18 @@ function AuthScreen() {
   const createWallet = useWalletStore((s) => s.actions.createWallet);
   const checkStorage = useWalletStore((s) => s.actions.checkStorage);
 
-  // Après un succès, on re-scanne le storage pour que App.tsx redirige
+  /**
+   * Rafraîchit l'état du stockage après une authentification réussie.
+   * Permet à l'application de rediriger l'utilisateur vers l'écran approprié.
+   */
   const triggerFlowRefresh = () => {
     checkStorage();
     // App.tsx détectera et redirigera
   };
 
+  /**
+   * Gère l'inscription d'un nouvel utilisateur.
+   */
   const handleSignup = async () => {
     if (!email || !password || !confirmPassword) {
       Toast.show({ type: 'error', text1: 'Champs manquants', text2: 'Email et mot de passe sont requis.' });
@@ -67,6 +78,9 @@ function AuthScreen() {
     }
   };
 
+  /**
+   * Gère la connexion d'un utilisateur existant.
+   */
   const handleLogin = async () => {
     if (!email || !password) {
       Toast.show({ type: 'error', text1: 'Champs manquants', text2: 'Email + mot de passe requis.' });
@@ -92,6 +106,9 @@ function AuthScreen() {
     }
   };
 
+  /**
+   * Gère la demande de réinitialisation de mot de passe.
+   */
   const handleReset = async () => {
     if (!email) {
       Toast.show({ type: 'error', text1: 'Email requis', text2: 'Indique ton email' });
@@ -232,6 +249,14 @@ function AuthScreen() {
   );
 }
 
+/**
+ * Bouton d'onglet pour basculer entre les modes d'authentification.
+ *
+ * @param {object} props - Les propriétés du composant.
+ * @param {boolean} props.active - Si l'onglet est actif.
+ * @param {string} props.label - Le libellé de l'onglet.
+ * @param {Function} props.onPress - La fonction à appeler lors de l'appui.
+ */
 function TabButton({ active, label, onPress }: { active: boolean; label: string; onPress: () => void }) {
   return (
     <TouchableOpacity style={[styles.modeTab, active && styles.modeTabActive]} onPress={onPress}>
@@ -240,6 +265,9 @@ function TabButton({ active, label, onPress }: { active: boolean; label: string;
   );
 }
 
+/**
+ * Séparateur visuel pour l'interface utilisateur.
+ */
 function Divider() {
   return (
     <View style={styles.dividerContainer}>

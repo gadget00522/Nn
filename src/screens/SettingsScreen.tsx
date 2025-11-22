@@ -11,6 +11,12 @@ import {
   storeEncryptedMnemonic
 } from '../utils/secureStorage';
 
+/**
+ * Écran des paramètres de l'application.
+ * Permet de configurer la langue, le thème, le verrouillage automatique, et la sécurité du portefeuille.
+ *
+ * @returns {JSX.Element} L'interface utilisateur des paramètres.
+ */
 function SettingsScreen() {
   const { t, i18n } = useTranslation();
   const wallet = useWalletStore();
@@ -28,6 +34,11 @@ function SettingsScreen() {
     wallet.actions.initializePreferences?.();
   }, []);
 
+  /**
+   * Applique la langue sélectionnée.
+   *
+   * @param {string} lng - Le code langue ('auto', 'fr', 'en').
+   */
   const applyLanguage = (lng: string) => {
     if (lng === 'auto') {
       const nav = typeof navigator !== 'undefined' && navigator.language.startsWith('fr') ? 'fr' : 'en';
@@ -43,18 +54,31 @@ function SettingsScreen() {
     Toast.show({ type: 'success', text1: t('settings.select_language'), text2: lng });
   };
 
+  /**
+   * Applique le mode de thème sélectionné.
+   *
+   * @param {string} mode - Le mode ('system', 'dark', 'light').
+   */
   const applyTheme = (mode: string) => {
     wallet.actions.setThemeMode(mode);
     setThemeMode(mode);
     Toast.show({ type: 'success', text1: t('settings.theme_mode'), text2: mode });
   };
 
+  /**
+   * Configure le délai de verrouillage automatique.
+   *
+   * @param {number} m - Le délai en minutes.
+   */
   const applyAutoLock = (m: number) => {
     wallet.actions.setAutoLock(m);
     setAutoLock(m);
     Toast.show({ type: 'success', text1: t('settings.auto_lock'), text2: m === 0 ? 'Off' : m + 'm' });
   };
 
+  /**
+   * Change le mot de passe de chiffrement du portefeuille.
+   */
   const handlePasswordChange = async () => {
     if (!oldPassword || !newPassword || newPassword !== confirm) {
       Toast.show({ type: 'error', text1: t('settings.password_change'), text2: 'Invalid input' });
@@ -75,6 +99,9 @@ function SettingsScreen() {
     }
   };
 
+  /**
+   * Migre le chiffrement vers la dernière version (Argon2id).
+   */
   const handleMigrate = async () => {
     setMigrating(true);
     try {
@@ -144,6 +171,13 @@ function SettingsScreen() {
   );
 }
 
+/**
+ * Composant de section pour grouper les paramètres.
+ *
+ * @param {object} props - Propriétés du composant.
+ * @param {string} props.title - Titre de la section.
+ * @param {React.ReactNode} props.children - Contenu de la section.
+ */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View style={styles.section}>
@@ -153,10 +187,24 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+/**
+ * Composant de ligne pour aligner les options.
+ *
+ * @param {object} props - Propriétés du composant.
+ * @param {React.ReactNode} props.children - Les options à afficher.
+ */
 function Row({ children }: { children: React.ReactNode }) {
   return <View style={styles.row}>{children}</View>;
 }
 
+/**
+ * Option sélectionnable (bouton radio stylisé).
+ *
+ * @param {object} props - Propriétés du composant.
+ * @param {string} props.label - Libellé de l'option.
+ * @param {boolean} props.active - Si l'option est sélectionnée.
+ * @param {Function} props.onPress - Fonction appelée au clic.
+ */
 function Option({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity style={[styles.option, active && styles.optionActive]} onPress={onPress}>

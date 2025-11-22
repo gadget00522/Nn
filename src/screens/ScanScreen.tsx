@@ -4,8 +4,11 @@ import { useNavigation } from '@react-navigation/native';
 import WalletConnectService from '../services/WalletConnectService';
 
 /**
- * ScanScreen - QR Code Scanner for WalletConnect URIs
- * Supports both camera-based QR scanning and manual URI input
+ * Écran de scan pour WalletConnect.
+ * Prend en charge le scan QR (via caméra) et la saisie manuelle de l'URI.
+ * Permet de connecter le portefeuille à des DApps externes.
+ *
+ * @returns {JSX.Element} L'interface utilisateur de l'écran de scan.
  */
 function ScanScreen() {
   const navigation = useNavigation();
@@ -24,6 +27,9 @@ function ScanScreen() {
     initWalletConnect();
   }, []);
 
+  /**
+   * Vérifie la disponibilité de la caméra (Web uniquement).
+   */
   const checkCameraAvailability = async () => {
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -37,6 +43,9 @@ function ScanScreen() {
     }
   };
 
+  /**
+   * Initialise le service WalletConnect s'il ne l'est pas déjà.
+   */
   const initWalletConnect = async () => {
     try {
       const wcService = WalletConnectService.getInstance();
@@ -49,6 +58,11 @@ function ScanScreen() {
     }
   };
 
+  /**
+   * Gère le résultat d'un scan QR.
+   *
+   * @param {string | null} data - Les données scannées (URI).
+   */
   const handleScan = (data: string | null) => {
     if (data && !scanning) {
       setScanning(true);
@@ -56,11 +70,19 @@ function ScanScreen() {
     }
   };
 
+  /**
+   * Gère les erreurs de scan.
+   *
+   * @param {any} err - L'erreur rencontrée.
+   */
   const handleError = (err: any) => {
     console.error('QR Scan error:', err);
     setError('Erreur lors du scan QR');
   };
 
+  /**
+   * Gère la soumission manuelle de l'URI.
+   */
   const handleManualSubmit = () => {
     if (manualUri.trim()) {
       handleUri(manualUri.trim());
@@ -69,6 +91,12 @@ function ScanScreen() {
     }
   };
 
+  /**
+   * Traite l'URI WalletConnect (scan ou manuel).
+   * Initie la connexion (pairing) via le service WalletConnect.
+   *
+   * @param {string} uri - L'URI WalletConnect (commence par wc:).
+   */
   const handleUri = async (uri: string) => {
     try {
       setError(null);
@@ -101,6 +129,9 @@ function ScanScreen() {
     }
   };
 
+  /**
+   * Retourne à l'écran précédent ou au tableau de bord.
+   */
   const handleGoBack = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();

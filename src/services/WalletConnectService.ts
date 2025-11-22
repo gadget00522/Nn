@@ -3,10 +3,10 @@ import { Web3Wallet, IWeb3Wallet } from '@walletconnect/web3wallet';
 import { getSdkError } from '@walletconnect/utils';
 
 /**
- * WalletConnect v2 Service
- * Singleton class to manage WalletConnect sessions and requests
+ * Service WalletConnect v2.
+ * Classe Singleton pour gérer les sessions et les requêtes WalletConnect.
  * 
- * TESTNET ONLY - Default projectId is for testing purposes
+ * TESTNET UNIQUEMENT - L'identifiant de projet (projectId) par défaut est destiné aux tests.
  */
 class WalletConnectService {
   private static instance: WalletConnectService;
@@ -22,7 +22,9 @@ class WalletConnectService {
   }
 
   /**
-   * Get singleton instance
+   * Obtient l'instance unique du service (Singleton).
+   *
+   * @returns {WalletConnectService} L'instance du service WalletConnect.
    */
   public static getInstance(): WalletConnectService {
     if (!WalletConnectService.instance) {
@@ -32,7 +34,11 @@ class WalletConnectService {
   }
 
   /**
-   * Initialize Web3Wallet with WalletConnect Core
+   * Initialise le portefeuille Web3 avec le noyau WalletConnect.
+   *
+   * @param {string} [customProjectId] - Identifiant de projet personnalisé optionnel.
+   * @returns {Promise<void>} Une promesse qui se résout une fois l'initialisation terminée.
+   * @throws {Error} Si l'initialisation échoue.
    */
   public async initialize(customProjectId?: string): Promise<void> {
     if (this.initialized && this.web3wallet) {
@@ -68,7 +74,10 @@ class WalletConnectService {
   }
 
   /**
-   * Setup event listeners for WalletConnect events
+   * Configure les écouteurs d'événements pour les événements WalletConnect.
+   * Écoute les propositions de session, les requêtes de session et les suppressions de session.
+   *
+   * @private
    */
   private setupEventListeners(): void {
     if (!this.web3wallet) return;
@@ -93,8 +102,11 @@ class WalletConnectService {
   }
 
   /**
-   * Pair with a DApp using WalletConnect URI
-   * @param uri - WalletConnect URI from QR code or manual input
+   * S'appaire avec une DApp en utilisant une URI WalletConnect.
+   *
+   * @param {string} uri - L'URI WalletConnect provenant d'un code QR ou d'une saisie manuelle.
+   * @returns {Promise<void>} Une promesse qui se résout une fois l'appairage initié.
+   * @throws {Error} Si WalletConnect n'est pas initialisé ou si l'appairage échoue.
    */
   public async pair(uri: string): Promise<void> {
     if (!this.web3wallet) {
@@ -111,10 +123,13 @@ class WalletConnectService {
   }
 
   /**
-   * Approve a session proposal
-   * @param proposalId - Proposal ID from session_proposal event
-   * @param accounts - Array of accounts to approve (format: "eip155:1:0x...")
-   * @param chainId - Chain ID (e.g., 11155111 for Sepolia)
+   * Approuve une proposition de session.
+   *
+   * @param {number} proposalId - L'ID de la proposition reçu via l'événement `session_proposal`.
+   * @param {string[]} accounts - Tableau des comptes à approuver (format: "eip155:1:0x...").
+   * @param {number} chainId - L'ID de la chaîne (ex: 11155111 pour Sepolia).
+   * @returns {Promise<void>} Une promesse qui se résout une fois la session approuvée.
+   * @throws {Error} Si WalletConnect n'est pas initialisé ou si l'approbation échoue.
    */
   public async approveSession(
     proposalId: number,
@@ -153,8 +168,11 @@ class WalletConnectService {
   }
 
   /**
-   * Reject a session proposal
-   * @param proposalId - Proposal ID from session_proposal event
+   * Rejette une proposition de session.
+   *
+   * @param {number} proposalId - L'ID de la proposition reçu via l'événement `session_proposal`.
+   * @returns {Promise<void>} Une promesse qui se résout une fois la session rejetée.
+   * @throws {Error} Si WalletConnect n'est pas initialisé ou si le rejet échoue.
    */
   public async rejectSession(proposalId: number): Promise<void> {
     if (!this.web3wallet) {
@@ -175,10 +193,13 @@ class WalletConnectService {
   }
 
   /**
-   * Respond to a session request (approve)
-   * @param topic - Session topic
-   * @param requestId - Request ID
-   * @param result - Result to send back to DApp
+   * Répond à une demande de session (approbation).
+   *
+   * @param {string} topic - Le sujet (topic) de la session.
+   * @param {number} requestId - L'ID de la requête.
+   * @param {any} result - Le résultat à renvoyer à la DApp.
+   * @returns {Promise<void>} Une promesse qui se résout une fois la réponse envoyée.
+   * @throws {Error} Si WalletConnect n'est pas initialisé ou si la réponse échoue.
    */
   public async respondRequest(
     topic: string,
@@ -207,9 +228,12 @@ class WalletConnectService {
   }
 
   /**
-   * Reject a session request
-   * @param topic - Session topic
-   * @param requestId - Request ID
+   * Rejette une demande de session.
+   *
+   * @param {string} topic - Le sujet (topic) de la session.
+   * @param {number} requestId - L'ID de la requête.
+   * @returns {Promise<void>} Une promesse qui se résout une fois la demande rejetée.
+   * @throws {Error} Si WalletConnect n'est pas initialisé ou si le rejet échoue.
    */
   public async rejectRequest(
     topic: string,
@@ -237,7 +261,9 @@ class WalletConnectService {
   }
 
   /**
-   * Get all active sessions
+   * Récupère toutes les sessions actives.
+   *
+   * @returns {Record<string, any>} Un objet contenant les sessions actives.
    */
   public getActiveSessions(): Record<string, any> {
     if (!this.web3wallet) {
@@ -247,8 +273,11 @@ class WalletConnectService {
   }
 
   /**
-   * Disconnect a session
-   * @param topic - Session topic to disconnect
+   * Déconnecte une session.
+   *
+   * @param {string} topic - Le sujet (topic) de la session à déconnecter.
+   * @returns {Promise<void>} Une promesse qui se résout une fois la session déconnectée.
+   * @throws {Error} Si WalletConnect n'est pas initialisé ou si la déconnexion échoue.
    */
   public async disconnectSession(topic: string): Promise<void> {
     if (!this.web3wallet) {
@@ -269,9 +298,10 @@ class WalletConnectService {
   }
 
   /**
-   * Subscribe to events
-   * @param event - Event name
-   * @param handler - Event handler function
+   * S'abonne à un événement.
+   *
+   * @param {string} event - Le nom de l'événement.
+   * @param {Function} handler - La fonction de gestion de l'événement.
    */
   public on(event: string, handler: Function): void {
     if (!this.eventHandlers.has(event)) {
@@ -281,9 +311,10 @@ class WalletConnectService {
   }
 
   /**
-   * Unsubscribe from events
-   * @param event - Event name
-   * @param handler - Event handler function
+   * Se désabonne d'un événement.
+   *
+   * @param {string} event - Le nom de l'événement.
+   * @param {Function} handler - La fonction de gestion de l'événement à retirer.
    */
   public off(event: string, handler: Function): void {
     const handlers = this.eventHandlers.get(event);
@@ -293,9 +324,11 @@ class WalletConnectService {
   }
 
   /**
-   * Emit an event to all subscribers
-   * @param event - Event name
-   * @param data - Event data
+   * Émet un événement à tous les abonnés.
+   *
+   * @private
+   * @param {string} event - Le nom de l'événement.
+   * @param {any} data - Les données de l'événement.
    */
   private emit(event: string, data: any): void {
     const handlers = this.eventHandlers.get(event);
@@ -311,7 +344,9 @@ class WalletConnectService {
   }
 
   /**
-   * Check if WalletConnect is initialized
+   * Vérifie si WalletConnect est initialisé.
+   *
+   * @returns {boolean} True si le service est initialisé, sinon False.
    */
   public isInitialized(): boolean {
     return this.initialized && this.web3wallet !== null;

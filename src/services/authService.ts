@@ -13,12 +13,26 @@ import {
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 
+/**
+ * Représente un utilisateur authentifié dans l'application.
+ */
 export type AuthUser = {
+  /** L'adresse email de l'utilisateur. */
   email: string | null;
+  /** L'identifiant unique de l'utilisateur (User ID). */
   uid: string;
+  /** Indique si l'email de l'utilisateur a été vérifié. */
   emailVerified: boolean;
 };
 
+/**
+ * Crée un nouveau compte utilisateur avec email et mot de passe.
+ * Envoie automatiquement un email de vérification si nécessaire.
+ *
+ * @param {string} email - L'adresse email de l'utilisateur.
+ * @param {string} password - Le mot de passe de l'utilisateur.
+ * @returns {Promise<AuthUser>} Une promesse contenant les informations de l'utilisateur créé.
+ */
 export async function signupWithEmail(
   email: string,
   password: string,
@@ -35,6 +49,13 @@ export async function signupWithEmail(
   };
 }
 
+/**
+ * Connecte un utilisateur existant avec email et mot de passe.
+ *
+ * @param {string} email - L'adresse email de l'utilisateur.
+ * @param {string} password - Le mot de passe de l'utilisateur.
+ * @returns {Promise<AuthUser>} Une promesse contenant les informations de l'utilisateur connecté.
+ */
 export async function loginWithEmail(
   email: string,
   password: string,
@@ -48,12 +69,21 @@ export async function loginWithEmail(
   };
 }
 
+/**
+ * Envoie un email de réinitialisation de mot de passe à l'adresse spécifiée.
+ *
+ * @param {string} email - L'adresse email pour laquelle réinitialiser le mot de passe.
+ * @returns {Promise<void>} Une promesse qui se résout une fois l'email envoyé.
+ */
 export async function requestPasswordReset(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email);
 }
 
 /**
- * Map Firebase auth error codes to user-friendly messages in French
+ * Mappe les codes d'erreur d'authentification Firebase vers des messages conviviaux en français.
+ *
+ * @param {string} errorCode - Le code d'erreur renvoyé par Firebase (ex: 'auth/user-disabled').
+ * @returns {string} Le message d'erreur traduit en français.
  */
 export function mapGoogleAuthError(errorCode: string): string {
   const errorMap: { [key: string]: string } = {
@@ -70,9 +100,11 @@ export function mapGoogleAuthError(errorCode: string): string {
 }
 
 /**
- * Sign in with Google using popup (web only)
- * Attempts signInWithPopup first, falls back to signInWithRedirect if popup is blocked
- * Returns AuthUser object on immediate success, or null if redirect flow started
+ * Connecte l'utilisateur avec Google en utilisant une fenêtre popup (Web uniquement).
+ * Tente d'abord `signInWithPopup`, et bascule vers `signInWithRedirect` si la popup est bloquée.
+ *
+ * @returns {Promise<AuthUser | null>} Une promesse contenant l'utilisateur authentifié en cas de succès immédiat, ou null si le flux de redirection a commencé.
+ * @throws {Error} Si la connexion échoue ou si l'environnement n'est pas le Web.
  */
 export async function loginWithGoogle(): Promise<AuthUser | null> {
   // Check if running on web
@@ -104,9 +136,10 @@ export async function loginWithGoogle(): Promise<AuthUser | null> {
 }
 
 /**
- * Handle redirect result after Google sign-in redirect flow
- * Call this on app load to check if user is returning from redirect
- * Returns AuthUser object if redirect result exists, null otherwise
+ * Gère le résultat de la redirection après une connexion Google (Web uniquement).
+ * Cette fonction doit être appelée au chargement de l'application pour vérifier si l'utilisateur revient d'une redirection.
+ *
+ * @returns {Promise<AuthUser | null>} Une promesse contenant l'utilisateur authentifié si un résultat de redirection existe, sinon null.
  */
 export async function handleRedirectResultOnLoad(): Promise<AuthUser | null> {
   // Check if running on web
@@ -130,6 +163,12 @@ export async function handleRedirectResultOnLoad(): Promise<AuthUser | null> {
   }
 }
 
+/**
+ * Observe les changements d'état de l'authentification Firebase.
+ *
+ * @param {function(AuthUser | null): void} callback - La fonction de rappel appelée lors d'un changement d'état.
+ * @returns {import('firebase/auth').Unsubscribe} Une fonction pour se désabonner de l'observateur.
+ */
 export function observeAuthState(callback: (user: AuthUser | null) => void) {
   return onAuthStateChanged(auth, (user: User | null) => {
     if (!user) return callback(null);
@@ -142,8 +181,12 @@ export function observeAuthState(callback: (user: AuthUser | null) => void) {
 }
 
 /**
- * Link a wallet address to a Firebase user in Firestore
- * Stores only the wallet address (NOT the mnemonic) in users/{uid}
+ * Lie une adresse de portefeuille à un utilisateur Firebase dans Firestore.
+ * Stocke uniquement l'adresse du portefeuille (PAS la phrase mnémonique) dans `users/{uid}`.
+ *
+ * @param {string} uid - L'identifiant unique de l'utilisateur.
+ * @param {string} walletAddress - L'adresse publique du portefeuille à lier.
+ * @returns {Promise<void>} Une promesse qui se résout une fois le lien établi.
  */
 export async function linkWalletAddressToUser(
   uid: string,
@@ -161,8 +204,10 @@ export async function linkWalletAddressToUser(
 }
 
 /**
- * Get the wallet address for a Firebase user from Firestore
- * Returns the address or null if not found
+ * Récupère l'adresse du portefeuille pour un utilisateur Firebase depuis Firestore.
+ *
+ * @param {string} uid - L'identifiant unique de l'utilisateur.
+ * @returns {Promise<string | null>} Une promesse contenant l'adresse du portefeuille ou null si non trouvée.
  */
 export async function getUserWalletAddress(uid: string): Promise<string | null> {
   const userDocRef = doc(db, 'users', uid);

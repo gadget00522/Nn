@@ -5,6 +5,13 @@ import { useNavigation } from '@react-navigation/native';
 import { ethers } from 'ethers';
 import React, { useState } from 'react';
 
+/**
+ * Écran d'échange (Swap) de démonstration.
+ * Simule un échange en effectuant une transaction vers soi-même (loopback).
+ * Permet de tester les fonctionnalités de transaction sans perdre de fonds (hors frais de gaz).
+ *
+ * @returns {JSX.Element} L'interface utilisateur de l'échange.
+ */
 function SwapScreen() {
   const navigation = useNavigation();
   const [amount, setAmount] = useState('');
@@ -16,8 +23,17 @@ function SwapScreen() {
   const currentNetwork = useWalletStore((state) => state.currentNetwork);
   const fetchData = useWalletStore((state) => state.actions.fetchData);
 
+  /**
+   * Retourne à l'écran précédent.
+   */
   const handleBack = () => navigation.goBack();
 
+  /**
+   * Exécute l'échange de démonstration.
+   * 1. Vérifie le montant et le solde.
+   * 2. Envoie une transaction vers l'adresse de l'utilisateur.
+   * 3. Met à jour le solde et notifie l'utilisateur.
+   */
   const handleSwap = async () => {
     if (!amount || parseFloat(amount) <= 0) {
       Toast.show({ type: 'error', text1: 'Montant invalide', text2: 'Veuillez entrer un montant valide' });

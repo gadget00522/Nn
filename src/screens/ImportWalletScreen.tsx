@@ -10,6 +10,13 @@ import { auth } from '../firebaseConfig';
 import { linkWalletAddressToUser } from '../services/authService';
 import { useNavigation } from '@react-navigation/native';
 
+/**
+ * Écran permettant à l'utilisateur d'importer un portefeuille existant via sa phrase de récupération.
+ * Gère la validation de la mnémonique, le chiffrement local et le lien avec le compte utilisateur.
+ *
+ * @param {any} props - Les propriétés du composant (navigation).
+ * @returns {JSX.Element} L'interface utilisateur pour l'importation.
+ */
 function ImportWalletScreen({ navigation: navProp }: any) {
   const navigation = useNavigation();
   const [mnemonic, setMnemonic] = useState('');
@@ -18,6 +25,10 @@ function ImportWalletScreen({ navigation: navProp }: any) {
 
   const importWalletFromMnemonic = useWalletStore((s) => s.actions.importWalletFromMnemonic);
 
+  /**
+   * Valide la phrase mnémonique et le mot de passe, puis lance l'importation.
+   * Lie également l'adresse du portefeuille au compte utilisateur Firebase si connecté.
+   */
   const validateAndImportWallet = async () => {
     const trimmed = mnemonic.trim();
 

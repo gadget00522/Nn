@@ -9,6 +9,12 @@ import {
 } from 'react-native';
 import useWalletStore from '../store/walletStore';
 
+/**
+ * Écran de vérification de la phrase de récupération.
+ * Demande à l'utilisateur de saisir 3 mots aléatoires de sa phrase pour confirmer qu'il l'a bien sauvegardée.
+ *
+ * @returns {JSX.Element} L'interface utilisateur de vérification.
+ */
 function BackupVerifyScreen() {
   const mnemonic = useWalletStore((state) => state.mnemonic);
   const verifyBackup = useWalletStore((state) => state.actions.verifyBackup);
@@ -18,6 +24,10 @@ function BackupVerifyScreen() {
   const [userInputs, setUserInputs] = useState({});
   const [error, setError] = useState('');
 
+  /**
+   * Initialise les mots à vérifier lors du chargement du composant.
+   * Sélectionne 3 indices aléatoires.
+   */
   useEffect(() => {
     if (mnemonic) {
       const words = mnemonic.split(' ');
@@ -41,6 +51,12 @@ function BackupVerifyScreen() {
     }
   }, [mnemonic]);
 
+  /**
+   * Gère le changement de texte dans les champs de saisie.
+   *
+   * @param {number} index - L'index du mot dans la phrase mnémonique.
+   * @param {string} value - La valeur saisie par l'utilisateur.
+   */
   const handleInputChange = (index, value) => {
     setUserInputs({
       ...userInputs,
@@ -49,6 +65,10 @@ function BackupVerifyScreen() {
     setError('');
   };
 
+  /**
+   * Vérifie si les mots saisis correspondent à la phrase originale.
+   * Si tout est correct, valide la sauvegarde et déverrouille le portefeuille.
+   */
   const handleVerify = () => {
     // Check if all inputs are filled
     const allFilled = wordsToVerify.every(item => userInputs[item.index]);
@@ -69,6 +89,9 @@ function BackupVerifyScreen() {
     }
   };
 
+  /**
+   * Retourne à l'écran de sauvegarde pour revoir la phrase.
+   */
   const handleBack = () => {
     setScreen('backup');
   };

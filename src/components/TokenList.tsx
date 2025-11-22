@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import useWalletStore from '../store/walletStore';
 
+/**
+ * Composant affichant la liste des tokens et permettant d'en ajouter manuellement.
+ *
+ * @returns {JSX.Element} L'interface utilisateur pour la liste des tokens.
+ */
 const TokenList = () => {
   const tokenBalances = useWalletStore(s => s.tokenBalances);
   const addCustomToken = useWalletStore(s => s.actions.addCustomToken);
@@ -10,6 +15,9 @@ const TokenList = () => {
   const [symbol, setSymbol] = useState('');
   const [decimals, setDecimals] = useState('');
 
+  /**
+   * Ajoute un token personnalisé à la liste surveillée.
+   */
   const handleAdd = () => {
     if (!addr.startsWith('0x') || addr.length !== 42) return;
     const d = parseInt(decimals || '18', 10);
@@ -21,8 +29,8 @@ const TokenList = () => {
     <View style={styles.container}>
       <Text style={styles.title}>Tokens</Text>
       {tokenBalances.map(t => (
-        <Text key={t.address} style={styles.item}>
-          {t.symbol}: {t.balanceFormatted}
+        <Text key={t.contractAddress} style={styles.item}>
+          {t.symbol}: {t.balance}
         </Text>
       ))}
 

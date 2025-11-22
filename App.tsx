@@ -31,6 +31,12 @@ import { DarkTheme, LightTheme } from './src/theme';
 
 const Stack = createNativeStackNavigator();
 
+/**
+ * Composant racine de l'application.
+ * Gère la navigation principale, l'état d'authentification (Firebase/Web), le thème et les redirections globales.
+ *
+ * @returns {JSX.Element} L'application principale.
+ */
 export default function App() {
   const navRef = useRef<NavigationContainerRef<any>>(null);
 

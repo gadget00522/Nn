@@ -3,6 +3,11 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator 
 import useWalletStore from '../store/walletStore';
 import { useTranslation } from 'react-i18next';
 
+/**
+ * Écran d'envoi de transactions (ETH ou tokens).
+ *
+ * @returns {JSX.Element} L'interface utilisateur pour envoyer des fonds.
+ */
 function SendScreen() {
   const { t } = useTranslation();
   const [toAddress, setToAddress] = useState('');
@@ -16,8 +21,10 @@ function SendScreen() {
   const hasBackedUp    = useWalletStore((s) => s.hasBackedUp);
   const isUnlocked     = useWalletStore((s) => s.isWalletUnlocked);
 
+  // Définit l'actif à envoyer, par défaut ETH
   const asset = assetToSend || { symbol: 'ETH', balance: '0', decimals: 18 };
 
+  // Détermine si le bouton d'envoi doit être désactivé
   const disabledReason = !isUnlocked
     ? t('wallet.send_disabled_locked')
     : !hasBackedUp
@@ -26,12 +33,18 @@ function SendScreen() {
         ? 'Champs requis'
         : null;
 
+  /**
+   * Déclenche la transaction si toutes les conditions sont réunies.
+   */
   const handleSend = () => {
     if (disabledReason === null) {
       sendTransaction(toAddress.trim(), amount.trim());
     }
   };
 
+  /**
+   * Retourne au tableau de bord.
+   */
   const handleBack = () => setScreen('dashboard', null);
 
   return (
