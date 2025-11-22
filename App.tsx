@@ -17,6 +17,9 @@ import SendScreen from './src/components/SendScreen.jsx';
 import ReceiveScreen from './src/components/ReceiveScreen.jsx';
 import ScanScreen from './src/screens/ScanScreen';
 import SettingsScreen from './src/screens/SettingsScreen.tsx';
+import AiChatScreen from './src/screens/AiChatScreen.tsx';
+import NftGalleryScreen from './src/screens/NftGalleryScreen.tsx';
+import MarketScreen from './src/screens/MarketScreen.tsx';
 import WalletConnectModal from './src/components/WalletConnectModal';
 import AuthScreen from './src/screens/AuthScreen';
 import useWalletStore from './src/store/walletStore';
@@ -171,6 +174,9 @@ export default function App() {
           <Stack.Screen name="Receive" component={ReceiveScreen} />
           <Stack.Screen name="Scan" component={ScanScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="AiChat" component={AiChatScreen} />
+          <Stack.Screen name="NftGallery" component={NftGalleryScreen} />
+          <Stack.Screen name="Market" component={MarketScreen} />
         </Stack.Navigator>
         <WalletConnectModal />
         <Toast />

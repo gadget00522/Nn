@@ -1,0 +1,3 @@
+
+> MalinWallet@1.1.1 web
+> webpack serve --config webpack.config.js --mode development
